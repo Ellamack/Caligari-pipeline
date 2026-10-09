@@ -27,6 +27,7 @@ from pathlib import Path
 
 import manifiesto as mf
 import hoja_referencia as hr
+import mocos
 
 AQUI = Path(__file__).parent
 PLANTILLAS = AQUI / "plantillas"
@@ -117,6 +118,9 @@ def armar_producto(m, datos):
                     {"TITULO": titulo, "SUBTITULO": f"{datos['autor']} · {datos['fecha']} · JPG 300 DPI",
                      "CITA": "Instant download", "N": str(n)}, numeros=False)
     portada = hr.renderizar(svg, bundle / "portada.jpg")
+    print("Mocos (detalle, flat lay, incluido, tamaños)…")
+    lado = m["etapas"]["procesar"]["params"].get("lado_max", 3508)
+    hechos = mocos.generar(finales, bundle / "mocos", titulo, n, lado)
 
     marca = json.loads((PLANTILLAS / "marca.json").read_text(encoding="utf-8"))
     readme = (PLANTILLAS / "readme_A.txt").read_text(encoding="utf-8")
@@ -145,7 +149,8 @@ def armar_producto(m, datos):
             z.write(f, f.name)
     return {"titulo": titulo, "n": n, "zip": zip_completo.name,
             "mb": round(zip_completo.stat().st_size / 1e6, 1), "md5": md5_de(zip_completo),
-            "muestra": muestra.name, "portada": portada.name, "reference": ref.name}
+            "muestra": muestra.name, "portada": portada.name, "reference": ref.name,
+            "mocos": [f"mocos/{h.name}" for h in hechos]}
 
 
 # ---------------------------------------------------------------- paso 4: PDF + ficha
@@ -244,7 +249,8 @@ def main():
         prod = armar_producto(m, datos)
         mf.marcar(m, "empaquetar", "esperando", **prod)
         print(f"ZIP completo: {bundle / prod['zip']}  ({prod['mb']} MB, md5 {prod['md5']})")
-    prod = {k: m["etapas"]["empaquetar"][k] for k in ("titulo", "n", "zip", "mb", "md5", "muestra", "portada", "reference")}
+    prod = {k: m["etapas"]["empaquetar"].get(k) for k in
+            ("titulo", "n", "zip", "mb", "md5", "muestra", "portada", "reference", "mocos")}
 
     enlace = args.enlace or mf.respuesta(args.id, "enlace")
     if not enlace:
@@ -267,7 +273,7 @@ def main():
         "precio_usd": 0,
         "archivos_etsy": [pdf.name, prod["muestra"]],
         "descarga_completa": {"zip": prod["zip"], "mb": prod["mb"], "enlace": enlace, "md5": prod["md5"]},
-        "imagenes": [prod["portada"], prod["reference"]],
+        "imagenes": [prod["portada"], prod["reference"]] + prod.get("mocos", []),
         "cita": f"{datos['autor']} ({datos['fecha']}). {meta.get('titulo', '')}. Internet Archive. {meta.get('url', '')}",
     }
     (bundle / "ficha.json").write_text(json.dumps(ficha, ensure_ascii=False, indent=2), encoding="utf-8")
