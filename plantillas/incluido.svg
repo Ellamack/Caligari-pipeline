@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Plantilla "What's included" — The Caligari Cabinet.
+     Marcadores: {TITULO} {N} {RESOLUCION} {FORMATO}. Rectángulo id="cuadricula": miniaturas. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="2400" height="2400" viewBox="0 0 2400 2400">
+  <image href="madera.jpg" x="0" y="0" width="2400" height="2400" preserveAspectRatio="xMidYMid slice"/>
+  <rect x="122" y="112" width="2160" height="2180" fill="#000" opacity="0.35"/>
+  <image href="papel.jpg" x="110" y="100" width="2160" height="2180" preserveAspectRatio="none"/>
+  <text x="1190" y="260" text-anchor="middle" font-family="Georgia, 'DejaVu Serif', serif" font-size="96" font-weight="bold" fill="#2b1d12">What's included</text>
+  <text x="1190" y="350" text-anchor="middle" font-family="Georgia, 'DejaVu Serif', serif" font-size="52" font-style="italic" fill="#3b2a1c">{TITULO}</text>
+  <rect id="cuadricula" x="230" y="420" width="1920" height="900" fill="none" stroke="#c00" stroke-width="4" stroke-dasharray="20 12"/>
+  <g font-family="Georgia, 'DejaVu Serif', serif" font-size="60" fill="#2b1d12">
+    <text x="330" y="1500">•  {N} complete plates, {FORMATO}</text>
+    <text x="330" y="1610">•  {RESOLUCION}</text>
+    <text x="330" y="1720">•  Numbered reference sheet</text>
+    <text x="330" y="1830">•  README with source and licence</text>
+    <text x="330" y="1940">•  PDF with your download link + sample pack</text>
+  </g>
+  <line x1="420" y1="2040" x2="1960" y2="2040" stroke="#3b2a1c" stroke-width="3"/>
+  <text x="1190" y="2140" text-anchor="middle" font-family="Georgia, 'DejaVu Serif', serif" font-size="50" font-style="italic" fill="#3b2a1c">Digital download · no physical item will be shipped</text>
+</svg>
