@@ -20,9 +20,19 @@ descartando páginas de texto, cubiertas y guardas estampadas):
 Para calibrar el umbral de color antes de procesar:
     python procesar_laminas.py cramer_original x --medir
 
+MODO PIPELINE (lee y escribe el manifiesto del libro, CONTRATO 2):
+    python procesar_laminas.py --libro deuitlandschekap11779cram
+  - Mide todas las páginas, calcula SOLO el umbral texto/lámina (hueco entre los dos grupos)
+    y lo compara con las láminas que declara la ficha del libro.
+  - Si cuadra: procesa, genera la hoja de contactos y te deja la pregunta de revisión
+    (CONTRATO 3; si no respondes en 12 h, sigue con "ok").
+  - Si no cuadra: no procesa nada y te pregunta qué umbral usar.
+  - Los ajustes de color salen de DEFAULTS_LIBRO (abajo) y quedan anotados en el manifiesto.
+
 Requiere: pip install opencv-python-headless numpy pillow
 """
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -174,7 +184,167 @@ def procesar(ruta_in, ruta_out, margen, calidad, papel, saturacion=1.0, contrast
     return f"{ruta_in.name}: {nota}"
 
 
+# ================================================================ MODO PIPELINE (--libro)
+DEFAULTS_LIBRO = {"min_papel": 50, "saturacion": 1.2, "contraste": 1.08, "lado_max": 3508,
+                  "calidad": 88, "margen": 0.01, "papel": [236, 226, 203]}
+
+
+def _otsu(valores):
+    v = np.sort(valores)
+    mejor, corte = -1.0, float(v[0])
+    for i in range(1, len(v)):
+        a, b = v[:i], v[i:]
+        s = len(a) * len(b) * (a.mean() - b.mean()) ** 2
+        if s > mejor:
+            mejor, corte = s, (v[i - 1] + v[i]) / 2
+    return corte
+
+
+def umbral_automatico(colores):
+    """Corte entre páginas de texto (poco color) y láminas (mucho color).
+
+    Otsu en escala logarítmica da una primera estimación; luego se busca el hueco más
+    grande entre valores vecinos cerca de ese punto (60%–115%) y se corta a la mitad.
+    Con Cramer vol. 1: Otsu solo daría ~26 y perdería láminas pálidas; el hueco da 22.95
+    (texto llega a 21.4, la lámina más pálida empieza en 24.5)."""
+    v = np.array(sorted(c for c in colores if c > 0), dtype=float)
+    if len(v) < 4:
+        return None
+    t0 = float(np.exp(_otsu(np.log(v))))
+    # huecos entre vecinos que CRUZAN la ventana [60%, 115%] de t0 (no solo los de adentro)
+    mejor, corte = 0.0, t0
+    for a, b in zip(v[:-1], v[1:]):
+        if b > t0 * 0.6 and a < t0 * 1.15 and b - a > mejor:
+            mejor, corte = b - a, (a + b) / 2
+    return round(float(corte), 1)
+
+
+def numero_pagina(ruta):
+    m = re.search(r"(\d+)$", ruta.stem)
+    return int(m.group(1)) if m else 0
+
+
+def hoja_contactos(rutas, destino, ancho=240, columnas=8):
+    """Miniaturas numeradas por página, para revisar de un vistazo qué se seleccionó."""
+    celdas = []
+    for r in rutas:
+        img = cv2.imread(str(r), cv2.IMREAD_COLOR)
+        if img is None:
+            continue
+        alto = int(ancho * img.shape[0] / img.shape[1])
+        mini = cv2.resize(img, (ancho, alto), interpolation=cv2.INTER_AREA)
+        celda = np.full((int(ancho * 1.5) + 34, ancho + 12, 3), 40, np.uint8)
+        mini = mini[: celda.shape[0] - 40]
+        celda[34:34 + mini.shape[0], 6:6 + mini.shape[1]] = mini
+        cv2.putText(celda, str(numero_pagina(r)), (8, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.75,
+                    (255, 255, 255), 2, cv2.LINE_AA)
+        celdas.append(celda)
+    if not celdas:
+        return None
+    filas = []
+    for i in range(0, len(celdas), columnas):
+        fila = celdas[i:i + columnas]
+        fila += [np.full_like(celdas[0], 40)] * (columnas - len(fila))
+        filas.append(np.hstack(fila))
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    cv2.imwrite(str(destino), np.vstack(filas), [cv2.IMWRITE_JPEG_QUALITY, 80])
+    return destino
+
+
+def modo_libro(ident, forzar_umbral=None):
+    import manifiesto as mf
+    m = mf.leer(ident)
+    if m is None or not mf.hecho(m, "descarga"):
+        sys.exit(f"{ident}: primero hay que correr descargar.py (no hay descarga terminada).")
+    if mf.hecho(m, "procesar") and forzar_umbral is None:
+        print(f"{ident}: ya procesado ({m['etapas']['procesar']['laminas']} láminas). Nada que hacer.")
+        return
+    params = dict(DEFAULTS_LIBRO, **m["etapas"]["procesar"].get("params", {}))
+    entrada = Path(m["etapas"]["descarga"]["carpeta"])
+    salida = mf.carpeta(ident) / "laminas"
+    archivos = sorted(p for p in entrada.iterdir() if p.suffix.lower() in EXTENSIONES)
+    mf.marcar(m, "procesar", "en_curso")
+
+    # Pasada 1: medir todas las páginas (lee cada imagen una vez)
+    print(f"Midiendo {len(archivos)} páginas…")
+    medidas = []
+    for i, p in enumerate(archivos, 1):
+        img = cv2.imread(str(p), cv2.IMREAD_COLOR)
+        if img is None:
+            medidas.append({"pagina": numero_pagina(p), "archivo": p.name, "color": 0.0, "papel": 0.0})
+            continue
+        medidas.append({"pagina": numero_pagina(p), "archivo": p.name,
+                        "color": round(colorido(img), 1), "papel": round(fraccion_papel(img))})
+        if i % 50 == 0:
+            print(f"  {i}/{len(archivos)}")
+
+    # Umbral: el que diga Elandrés, o el automático
+    con_papel = [d["color"] for d in medidas if d["papel"] >= params["min_papel"]]
+    if forzar_umbral is not None:
+        umbral, origen = forzar_umbral, "manual"
+    else:
+        umbral, origen = umbral_automatico(con_papel), "auto"
+    seleccion = [d for d in medidas if umbral is not None
+                 and d["papel"] >= params["min_papel"] and d["color"] >= umbral]
+    declaradas = m["meta"].get("laminas_declaradas")
+    tolerancia = max(3, round(0.05 * declaradas)) if declaradas else None
+    cuadra = declaradas is None or abs(len(seleccion) - declaradas) <= tolerancia
+    print(f"Umbral {origen}: {umbral}  →  {len(seleccion)} láminas"
+          + (f" (la ficha declara {declaradas})" if declaradas else " (la ficha no declara cuántas)"))
+
+    for d in medidas:
+        d["incluida"] = d in seleccion
+    m["laminas"] = medidas
+    params["solo_color"] = umbral
+
+    if origen == "auto" and not cuadra:
+        tabla = mf.carpeta(ident) / "medicion.txt"
+        tabla.write_text("color  papel%  archivo\n" + "\n".join(
+            f"{d['color']:5.1f}  {d['papel']:5.0f}  {d['archivo']}" for d in medidas), encoding="utf-8")
+        mf.marcar(m, "procesar", "esperando", params=params, origen_umbral=origen,
+                  paginas=len(archivos), laminas=len(seleccion))
+        mf.preguntar(ident, "procesar",
+                     f"El umbral automático ({umbral}) da {len(seleccion)} láminas, pero la ficha declara "
+                     f"{declaradas}. Revisa medicion.txt y dime qué umbral usar.",
+                     formato="umbral 23", adjuntos=[tabla], si_no_respondes=None)
+        print(f"ALTO: no cuadra con las {declaradas} declaradas. Te dejé la pregunta en outbox/.")
+        return
+
+    # Pasada 2: procesar solo las seleccionadas
+    salida.mkdir(parents=True, exist_ok=True)
+    for viejo in salida.glob("*.jpg"):  # si se rehace con otro umbral, no quedan láminas de la vez anterior
+        viejo.unlink()
+    papel = tuple(params["papel"]) if params["papel"] else None
+    hechas = []
+    for i, d in enumerate(seleccion, 1):
+        origen_p = entrada / d["archivo"]
+        destino = salida / (origen_p.stem + ".jpg")
+        procesar(origen_p, destino, params["margen"], params["calidad"], papel, params["saturacion"],
+                 params["contraste"], params["lado_max"])
+        d["salida"] = destino.name
+        hechas.append(destino)
+        if i % 10 == 0 or i == len(seleccion):
+            print(f"  procesadas {i}/{len(seleccion)}")
+
+    hoja = hoja_contactos(hechas, mf.carpeta(ident) / "bundle" / "hoja_contactos.jpg")
+    mf.marcar(m, "procesar", "hecho", params=params, origen_umbral=origen,
+              paginas=len(archivos), laminas=len(hechas))
+    mf.preguntar(ident, "revision",
+                 f"{len(hechas)} láminas seleccionadas. ¿Quitar alguna? (números de la hoja de contactos)",
+                 formato="ok | quitar 7,64", adjuntos=[hoja] if hoja else [], si_no_respondes="ok", horas=12)
+    mf.marcar(m, "revision", "esperando")
+    print(f"Listo: {len(hechas)} láminas en {salida}. Hoja de contactos: {hoja}")
+    print("Pregunta de revisión en outbox/ (si no respondes en 12 h, se toma como 'ok').")
+
+
 def main():
+    if "--libro" in sys.argv:
+        ap = argparse.ArgumentParser(description="Modo pipeline: procesa un libro según su manifiesto.")
+        ap.add_argument("--libro", required=True)
+        ap.add_argument("--umbral", type=float, help="fuerza un umbral (rehace la etapa)")
+        a = ap.parse_args()
+        modo_libro(a.libro, a.umbral)
+        return
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("entrada", type=Path)
     ap.add_argument("salida", type=Path)
