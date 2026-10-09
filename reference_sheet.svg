@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Plantilla de Reference Sheet — The Caligari Cabinet
+     Edítala en Inkscape como quieras (colores, fuentes, posiciones). Reglas para el script:
+       · Textos con marcadores entre llaves se reemplazan: {TITULO} {SUBTITULO} {CITA} {N}
+       · El rectángulo id="cuadricula" marca dónde van las miniaturas (el script lo oculta).
+       · madera.jpg y papel.jpg: reemplázalas por tus texturas con el mismo nombre. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="2400" height="2800" viewBox="0 0 2400 2800">
+  <image id="fondo" href="madera.jpg" x="0" y="0" width="2400" height="2800" preserveAspectRatio="xMidYMid slice"/>
+  <rect x="122" y="112" width="2160" height="2580" fill="#000" opacity="0.35"/>
+  <image id="papel" href="papel.jpg" x="110" y="100" width="2160" height="2580" preserveAspectRatio="none"/>
+  <rect id="cuadricula" x="210" y="200" width="1960" height="2080" fill="none" stroke="#c00" stroke-width="4" stroke-dasharray="20 12"/>
+  <text x="1190" y="2410" text-anchor="middle" font-family="Georgia, 'DejaVu Serif', serif" font-size="64" font-weight="bold" fill="#2b1d12">{TITULO}</text>
+  <text x="1190" y="2492" text-anchor="middle" font-family="Georgia, 'DejaVu Serif', serif" font-size="46" fill="#3b2a1c">{SUBTITULO}</text>
+  <line x1="420" y1="2530" x2="1960" y2="2530" stroke="#3b2a1c" stroke-width="3"/>
+  <text x="1190" y="2600" text-anchor="middle" font-family="Georgia, 'DejaVu Serif', serif" font-size="40" font-style="italic" fill="#3b2a1c">{CITA}</text>
+</svg>
