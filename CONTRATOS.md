@@ -113,7 +113,7 @@ Estados válidos de cualquier etapa: `pendiente | en_curso | hecho | esperando |
   "descripcion": "…",
   "tags": ["…13 tags, máx. 20 caracteres c/u…"],
   "precio_usd": 0,
-  "archivos_etsy": ["LEEME_descarga.pdf", "muestra.zip"],
+  "archivos_etsy": ["Download_Your_Collection.pdf", "muestra.zip"],
   "descarga_completa": {"zip": "deuitlandschekap11779cram_completo.zip", "mb": 198,
                         "enlace": "https://drive.google.com/…", "md5": "…"},
   "imagenes": ["collage_1.jpg", "hoja_contactos.jpg"],
@@ -121,7 +121,7 @@ Estados válidos de cualquier etapa: `pendiente | en_curso | hecho | esperando |
 }
 ```
 - Entrega por enlace (decidido 9 oct 2026): el bundle completo NO va en Etsy (límite 5 × 20 MB).
-  En Etsy van `LEEME_descarga.pdf` (enlace + QR + instrucciones) y `muestra.zip` (≤ 20 MB, unas láminas
+  En Etsy van `Download_Your_Collection.pdf` (enlace + QR + instrucciones) y `muestra.zip` (≤ 20 MB, unas láminas
   a resolución completa), para que la compra nunca se sienta vacía.
 - La descripción del listing debe decir claramente: "Recibes un PDF con enlace de descarga (ZIP, ~N MB)".
 - El ZIP completo vive en una carpeta de entregas que NO se vacía (distinta de la carpeta de tránsito).

@@ -6,7 +6,7 @@ Avanza en pasos y se detiene donde necesita algo de ti (CONTRATO 3):
   2. Producto: láminas renombradas + Reference Sheet + README → ZIP completo (+ MD5),
      muestra.zip (≤ 18 MB, va en Etsy) y portada.jpg (imagen principal del listing).
   3. Enlace: te pide el enlace de Drive del ZIP completo (no avanza solo: es público).
-  4. LEEME_descarga.pdf (botón + QR + instrucciones) y ficha.json (CONTRATO 4).
+  4. Download_Your_Collection.pdf (botón + QR + instrucciones) y ficha.json (CONTRATO 4).
   5. Borra los intermedios (páginas crudas y láminas sueltas) salvo --conservar.
 
 Uso:
@@ -30,6 +30,7 @@ import hoja_referencia as hr
 import mocos
 
 AQUI = Path(__file__).parent
+PDF_ENTREGA = "Download_Your_Collection.pdf"  # el comprador lo ve: en inglés
 PLANTILLAS = AQUI / "plantillas"
 MUESTRA_MAX = 18_000_000  # Etsy permite 20 MB por archivo; dejamos margen
 
@@ -140,7 +141,9 @@ def armar_producto(m, datos):
                            subtitulo=f"{datos['autor']} · {datos['fecha']}")
 
     marca = json.loads((PLANTILLAS / "marca.json").read_text(encoding="utf-8"))
-    readme = (PLANTILLAS / "readme_A.txt").read_text(encoding="utf-8")
+    # línea A (láminas tal cual, solo enderezadas y recortadas) o B (restauradas y vectorizadas):
+    # cada una tiene su README, para no prometer una restauración que el producto no lleva
+    readme = (PLANTILLAS / f"readme_{m.get('linea', 'A')}.txt").read_text(encoding="utf-8")
     campos = {"TITULO": titulo, "N": str(n), "OBRA": datos["obra"], "AUTOR": datos["autor"],
               "FECHA": datos["fecha"], "LADO_MAX": str(m["etapas"]["procesar"]["params"].get("lado_max", "")),
               "LISTA": "\n".join(lista), "CITA": f"{cita}\n{m['meta'].get('url', '')}",
@@ -285,7 +288,7 @@ def main():
         sys.exit(f"Eso no parece un enlace: {enlace}")
 
     marca = json.loads((PLANTILLAS / "marca.json").read_text(encoding="utf-8"))
-    pdf = bundle / "LEEME_descarga.pdf"
+    pdf = bundle / PDF_ENTREGA
     hacer_pdf(pdf, prod, enlace, datos, marca)
     ficha = {
         "titulo": f"{prod['titulo']} | {datos['obra']}, {datos['autor']} {datos['fecha']} | Printable JPG Bundle"[:140],

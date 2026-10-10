@@ -32,6 +32,7 @@ MODO PIPELINE (lee y escribe el manifiesto del libro, CONTRATO 2):
 Requiere: pip install opencv-python-headless numpy pillow
 """
 import argparse
+import shutil
 import re
 import sys
 from pathlib import Path
@@ -327,6 +328,9 @@ def modo_libro(ident, forzar_umbral=None):
             print(f"  procesadas {i}/{len(seleccion)}")
 
     hoja = hoja_contactos(hechas, mf.carpeta(ident) / "bundle" / "hoja_contactos.jpg")
+    if hoja:  # copia a la carpeta de revisión, con el nombre del libro para no confundirlas
+        mf.REVISION.mkdir(parents=True, exist_ok=True)
+        hoja = Path(shutil.copy2(hoja, mf.REVISION / f"{ident}_hoja_contactos.jpg"))
     mf.marcar(m, "procesar", "hecho", params=params, origen_umbral=origen,
               paginas=len(archivos), laminas=len(hechas))
     mf.preguntar(ident, "revision",

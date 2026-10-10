@@ -49,7 +49,7 @@ python3 empaquetar.py deuitlandschekap11779cram
 ```
 
 Resultado en `/home/minion/caligari/libros/<ID>/bundle/`:
-- `LEEME_descarga.pdf` + `sample_pack.zip` → se suben a Etsy como archivos digitales
+- `Download_Your_Collection.pdf` + `sample_pack.zip` → se suben a Etsy como archivos digitales
 - `portada.jpg` + `*_reference_sheet.jpg` + `mocos/` (detalles, flat lay, incluido, tamaños) → imágenes del listing.
   Cada imagen usa láminas distintas.
 - `mocos/pin_pinterest.jpg` → pin vertical 1000×1500 para Pinterest (Drive → `T&P/pinterest/`), no para Etsy

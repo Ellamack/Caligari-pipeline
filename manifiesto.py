@@ -10,6 +10,8 @@ from datetime import datetime
 from pathlib import Path
 
 BASE = Path(os.environ.get("CALIGARI_BASE", "/home/minion/caligari"))
+# Todo lo que Elandrés tiene que mirar con sus ojos llega aquí (y de aquí, a Drive con rclone).
+REVISION = BASE / "Elandres_revision"
 ETAPAS = ("descarga", "procesar", "revision", "empaquetar", "ficha")
 ESTADOS = ("pendiente", "en_curso", "hecho", "esperando", "error")
 
