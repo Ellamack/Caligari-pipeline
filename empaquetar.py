@@ -41,6 +41,21 @@ def autor_legible(creador):
     return f"{partes[1]} {partes[0]}" if len(partes) >= 2 else (partes[0] if partes else "")
 
 
+def fecha_legible(meta):
+    """Años de publicación para mostrar. Muchas obras salieron por entregas durante años
+    (Cramer: 1775-1779): si la ficha trae un rango se usa completo; si no, el año.
+    --fecha en la línea de comandos manda sobre todo."""
+    if meta.get("fecha_mostrar"):
+        return meta["fecha_mostrar"]
+    for campo in ("fecha", "titulo"):
+        r = re.search(r"\b(1[5-9]\d\d)\s*[-–]\s*(1[5-9]\d\d|\d\d)\b", meta.get(campo) or "")
+        if r:
+            fin = r.group(2) if len(r.group(2)) == 4 else r.group(1)[:2] + r.group(2)
+            return f"{r.group(1)}-{fin}"
+    r = re.search(r"\b(1[5-9]\d\d)\b", meta.get("fecha") or "")
+    return r.group(1) if r else ""
+
+
 def obra_corta(titulo):
     t = re.split(r"[,:;/]", titulo)[0].strip()
     return t[:70] if t else titulo[:70]
@@ -114,13 +129,15 @@ def armar_producto(m, datos):
     ref = hr.renderizar(svg, contenido / f"{base}_reference_sheet.jpg")
     shutil.copy2(ref, bundle / ref.name)  # copia fuera de contenido/: también es imagen del listing
     print("Portada del listing…")
-    svg = hr.llenar(PLANTILLAS / "reference_sheet.svg", hr.mas_coloridas(finales, 6),
+    orden = hr.ranking_color(finales)  # una sola vez: portada y mocos se reparten láminas distintas
+    svg = hr.llenar(PLANTILLAS / "reference_sheet.svg", sorted(orden[:6]),
                     {"TITULO": titulo, "SUBTITULO": f"{datos['autor']} · {datos['fecha']} · JPG 300 DPI",
                      "CITA": "Instant download", "N": str(n)}, numeros=False)
     portada = hr.renderizar(svg, bundle / "portada.jpg")
     print("Mocos (detalle, flat lay, incluido, tamaños)…")
     lado = m["etapas"]["procesar"]["params"].get("lado_max", 3508)
-    hechos = mocos.generar(finales, bundle / "mocos", titulo, n, lado)
+    hechos = mocos.generar(finales, bundle / "mocos", titulo, n, lado, vistosas=orden[6:],
+                           subtitulo=f"{datos['autor']} · {datos['fecha']}")
 
     marca = json.loads((PLANTILLAS / "marca.json").read_text(encoding="utf-8"))
     readme = (PLANTILLAS / "readme_A.txt").read_text(encoding="utf-8")
@@ -150,7 +167,8 @@ def armar_producto(m, datos):
     return {"titulo": titulo, "n": n, "zip": zip_completo.name,
             "mb": round(zip_completo.stat().st_size / 1e6, 1), "md5": md5_de(zip_completo),
             "muestra": muestra.name, "portada": portada.name, "reference": ref.name,
-            "mocos": [f"mocos/{h.name}" for h in hechos]}
+            "mocos": [f"mocos/{h.name}" for h in hechos if not h.name.startswith("pin_")],
+            "pin": next((f"mocos/{h.name}" for h in hechos if h.name.startswith("pin_")), None)}
 
 
 # ---------------------------------------------------------------- paso 4: PDF + ficha
@@ -219,6 +237,7 @@ def main():
     ap.add_argument("id")
     ap.add_argument("--tema", help='p. ej. "Butterfly", "Bird", "Botanical"')
     ap.add_argument("--obra", help="título corto de la obra (por defecto, del manifiesto)")
+    ap.add_argument("--fecha", help='años de publicación tal como se muestran, p. ej. "1775-1779"')
     ap.add_argument("--enlace", help="enlace de Drive del ZIP completo")
     ap.add_argument("--conservar", action="store_true", help="no borrar páginas crudas ni láminas al final")
     ap.add_argument("--rehacer", action="store_true", help="vuelve a armar el producto aunque ya exista")
@@ -236,8 +255,10 @@ def main():
         meta["tema"] = args.tema
     if args.obra:
         meta["obra"] = args.obra
+    if args.fecha:
+        meta["fecha_mostrar"] = args.fecha
     datos = {"tema": meta.get("tema", ""), "obra": meta.get("obra") or obra_corta(meta.get("titulo", "")),
-             "autor": autor_legible(meta.get("autor", "")), "fecha": (meta.get("fecha") or "")[:4]}
+             "autor": autor_legible(meta.get("autor", "")), "fecha": fecha_legible(meta)}
     mf.guardar(m)
 
     if not aplicar_revision(m):
@@ -250,7 +271,7 @@ def main():
         mf.marcar(m, "empaquetar", "esperando", **prod)
         print(f"ZIP completo: {bundle / prod['zip']}  ({prod['mb']} MB, md5 {prod['md5']})")
     prod = {k: m["etapas"]["empaquetar"].get(k) for k in
-            ("titulo", "n", "zip", "mb", "md5", "muestra", "portada", "reference", "mocos")}
+            ("titulo", "n", "zip", "mb", "md5", "muestra", "portada", "reference", "mocos", "pin")}
 
     enlace = args.enlace or mf.respuesta(args.id, "enlace")
     if not enlace:
@@ -285,6 +306,10 @@ def main():
         shutil.rmtree(bundle / "contenido", ignore_errors=True)
         print("Intermedios borrados (páginas crudas, láminas sueltas).")
     print(f"Listo. Para Etsy: {pdf.name} + {prod['muestra']}; imágenes: {prod['portada']}, {prod['reference']}")
+    if prod.get("pin"):
+        print(f"Para Pinterest: {prod['pin']} (súbelo a Drive → T&P/pinterest/)")
+    print("RECUERDA: al publicar en Etsy, agrega el listing a su oferta (Marketing → Sales and discounts).\n"
+          "          Las ofertas que ya corren NO incluyen listings nuevos. Política de precios: roadmap del proyecto.")
     print(f"Todo en {bundle}")
 
 

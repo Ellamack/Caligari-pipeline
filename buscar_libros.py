@@ -80,18 +80,63 @@ def romano_a_int(s):
     return total
 
 
-def laminas_declaradas(descripcion):
-    """Busca en la descripción cuántas láminas declara el libro. None si no lo dice."""
-    d = descripcion.replace("–", "-").replace("—", "-")
-    candidatos = []
-    # "plates I-XCVI", "pl. I-XLVIII"
-    for m in re.finditer(r"\b(?:plates?|pl\.|tab\.|tafeln?|planches?)\s*([IVXLCDM]+)\s*-\s*([IVXLCDM]+)\b", d, re.I):
-        candidatos.append(romano_a_int(m.group(2)) - romano_a_int(m.group(1)) + 1)
-    # "96 col. plates", "48 pl.", "120 hand-coloured plates"
-    for m in re.finditer(r"\b(\d{1,4})\s*(?:[a-z\-]+\.?\s+){0,3}?(?:plates?|pl\.|tafeln|planches)\b", d, re.I):
-        candidatos.append(int(m.group(1)))
-    candidatos = [c for c in candidatos if 0 < c < 2000]
-    return max(candidatos) if candidatos else None
+_PLACAS = r"(?:plates?|pl\.?|tab\.?|tafeln?|planches?|taf\.?)"
+_TOMO = re.compile(r"\b(?:v|vol|vols|volume|deel|d|t|tome|tomo|bd|band|th|theil|teil)\.?\s*(\d{1,2}|[IVX]{1,4})\b", re.I)
+
+
+def _a_numero(s):
+    return int(s) if s.isdigit() else romano_a_int(s)
+
+
+def _conteos(d):
+    """Todos los conteos de láminas que aparecen en el texto, con su posición."""
+    hallados = []
+    # rangos: "plates I-XCVI", "pl. 1-96"
+    for m in re.finditer(_PLACAS + r"\s*([IVXLCDM]+|\d{1,4})\s*-\s*([IVXLCDM]+|\d{1,4})\b", d, re.I):
+        a, b = m.group(1), m.group(2)
+        if a.isdigit() != b.isdigit():
+            continue
+        n = _a_numero(b) - _a_numero(a) + 1
+        hallados.append((m.start(), n))
+    # cantidades: "96 col. plates", "48 pl.", "120 hand-coloured plates"
+    for m in re.finditer(r"\b(\d{1,4})\s*(?:[a-z\-]+\.?\s+){0,3}?" + _PLACAS + r"(?![a-z])", d, re.I):
+        hallados.append((m.start(), int(m.group(1))))
+    return [(p, n) for p, n in hallados if 0 < n < 2000]
+
+
+def laminas_declaradas(descripcion, volumen=None):
+    """Cuántas láminas declara la ficha PARA ESTE TOMO. None si no se puede saber con certeza.
+
+    Obras en varios tomos: la descripción suele dar los rangos de todos ("v. 1: pl. I-XCVI;
+    v. 2: pl. XCVII-CXCII") o el total de la obra ("4 v. : 400 col. pl."). Se busca el tramo del
+    tomo que se descarga (campo `volume` de la ficha); si no se encuentra y hay ambigüedad,
+    devuelve None. Mejor no validar que validar contra un número equivocado.
+    """
+    d = (descripcion or "").replace("–", "-").replace("—", "-")
+    conteos = _conteos(d)
+    if not conteos:
+        return None
+    marcas = [(m.start(), _a_numero(m.group(1).upper() if not m.group(1).isdigit() else m.group(1)))
+              for m in _TOMO.finditer(d)]
+    tomo = None
+    if volumen:
+        m = re.search(r"(\d{1,2}|\b[IVX]{1,4}\b)", str(volumen))
+        if m:
+            tomo = _a_numero(m.group(1).upper() if not m.group(1).isdigit() else m.group(1))
+    if tomo is not None and marcas:
+        # tramo de texto que va de la marca de este tomo a la siguiente marca
+        for i, (pos, n_tomo) in enumerate(marcas):
+            if n_tomo != tomo:
+                continue
+            hasta = marcas[i + 1][0] if i + 1 < len(marcas) else len(d)
+            propios = {n for p, n in conteos if pos <= p < hasta}
+            if len(propios) == 1:
+                return propios.pop()
+    distintos = {n for _, n in conteos}
+    varios_tomos = re.search(r"\b(\d{1,2})\s*v(?:ols?)?\.?(?=[\s:;,)]|$)", d, re.I)
+    if varios_tomos and int(varios_tomos.group(1)) > 1:
+        return None  # el número es del total de la obra, no de este tomo
+    return distintos.pop() if len(distintos) == 1 else None
 
 
 def evaluar_derechos(meta, anio):
@@ -150,7 +195,7 @@ def ficha_candidato(doc):
         "fecha": anio_txt[:20],
         "derechos": nota,
         "paginas": int(meta.get("imagecount") or doc.get("imagecount") or 0),
-        "laminas_declaradas": laminas_declaradas(texto(meta.get("description"))),
+        "laminas_declaradas": laminas_declaradas(texto(meta.get("description")), texto(meta.get("volume"))),
         "jp2_archivo": jp2["name"] if jp2 else None,
         "jp2_mb": round(int(jp2.get("size", 0)) / 1e6, 1) if jp2 else None,
         "jp2_md5": jp2.get("md5") if jp2 else None,

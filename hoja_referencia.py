@@ -106,6 +106,14 @@ def llenar(plantilla, laminas, campos, numeros=True):
     cols, filas, cw, ch, img_h = mejor_cuadricula(len(tamanos), W, H, aspecto, 12 if numeros else 0)
     grupo = ET.Element(f"{{{SVG}}}g", {"id": "laminas"})
     lado_mini = int(max(img_h * aspecto, img_h) * 1.5)  # resolución suficiente para el render
+    # Filas compactas: si las láminas quedan limitadas por el ancho, las celdas sobran de alto.
+    # En vez de centrar cada lámina en su celda (deja huecos grandes entre filas), las filas van
+    # separadas por el mismo espacio que hay entre columnas y el bloque entero se centra.
+    etiqueta = img_h * 0.14 if numeros else 0
+    hueco_x = max(cw - img_h * aspecto, img_h * 0.04)
+    paso_y = min(ch, img_h + etiqueta + hueco_x)
+    alto_bloque = (filas - 1) * paso_y + img_h + etiqueta
+    y_inicio = y0 + (H - alto_bloque) / 2
     for k, ((iw, ih), ruta) in enumerate(zip(tamanos, laminas)):
         f, c = divmod(k, cols)
         n_en_fila = min(cols, len(tamanos) - f * cols)
@@ -113,7 +121,7 @@ def llenar(plantilla, laminas, campos, numeros=True):
         h = img_h
         w = h * iw / ih
         cx = x0 + desplaz + c * cw + cw / 2
-        top = y0 + f * ch + (ch - h - (ch * 0.12 if numeros else 0)) / 2
+        top = y_inicio + f * paso_y
         ET.SubElement(grupo, f"{{{SVG}}}rect", {
             "x": f"{cx - w / 2 + 3:.1f}", "y": f"{top + 4:.1f}", "width": f"{w:.1f}", "height": f"{h:.1f}",
             "fill": "#000", "opacity": "0.25"})
@@ -123,9 +131,9 @@ def llenar(plantilla, laminas, campos, numeros=True):
         el.set(f"{{{XLINK}}}href", a_data_uri(ruta, lado_max=lado_mini))  # una a la vez
         if numeros:
             t = ET.SubElement(grupo, f"{{{SVG}}}text", {
-                "x": f"{cx:.1f}", "y": f"{top + h + ch * 0.085:.1f}", "text-anchor": "middle",
+                "x": f"{cx:.1f}", "y": f"{top + h + etiqueta * 0.72:.1f}", "text-anchor": "middle",
                 "font-family": "Georgia, 'DejaVu Serif', serif",
-                "font-size": f"{max(14, ch * 0.065):.0f}", "fill": "#3b2a1c"})
+                "font-size": f"{max(14, min(ch * 0.065, etiqueta * 0.6)):.0f}", "fill": "#3b2a1c"})
             t.text = str(k + 1)
     padre.insert(indice, grupo)
     return ET.tostring(raiz, encoding="unicode")
@@ -150,15 +158,21 @@ def renderizar(svg_texto, destino, ancho=None):
     return destino
 
 
-def mas_coloridas(rutas, k):
-    """Para la portada: las k láminas con más color (las más vistosas)."""
+def ranking_color(rutas):
+    """Todas las láminas, de la más colorida a la menos. Se calcula una vez y se reparte
+    entre portada y mocos para que ninguna imagen del listing repita lámina."""
     import numpy as np
     def color(r):
         a = np.asarray(abrir_reducida(r, 300).resize((200, 260)), dtype=np.float32)
         rg = a[..., 0] - a[..., 1]
         yb = 0.5 * (a[..., 0] + a[..., 1]) - a[..., 2]
         return float(np.hypot(rg.std(), yb.std()))
-    return sorted(sorted(rutas, key=color, reverse=True)[:k])
+    return sorted(rutas, key=color, reverse=True)
+
+
+def mas_coloridas(rutas, k):
+    """Para la portada: las k láminas con más color (las más vistosas), en orden del libro."""
+    return sorted(ranking_color(rutas)[:k])
 
 
 def main():

@@ -1,12 +1,13 @@
 """
 mocos.py — Imágenes de listing (mockups) sin Placeit, generadas por código.
 
-Genera 5 imágenes por bundle:
+Genera 6 imágenes por bundle (cada una con láminas distintas):
   detalle_1.jpg, detalle_2.jpg  Acercamiento al 100% de la zona con más trabajo de color
                                 (+ miniatura de la lámina completa con el recuadro de dónde sale).
   flatlay.jpg                   Láminas apiladas y giradas, con sombra, sobre la textura de madera.
   incluido.jpg                  "What's included" (plantilla SVG plantillas/incluido.svg).
   tamanos.jpg                   Guía de tamaños de impresión (A4, US Letter, 8×10 in).
+  pin_pinterest.jpg             Pin vertical 1000×1500 para Pinterest (no se sube a Etsy).
 
 Las de "lámina enmarcada en una pared" necesitan fotos de escena: van en otro paso.
 
@@ -143,7 +144,9 @@ def flatlay(rutas, destino, titulo, n):
     lienzo.alpha_composite(banda, (0, LIENZO[1] - 260))
     d = ImageDraw.Draw(lienzo)
     texto_centrado(d, LIENZO[1] - 225, titulo, fuente(84, negrita=True), LIENZO[0])
-    texto_centrado(d, LIENZO[1] - 115, f"{n} printable plates · instant download", fuente(54), LIENZO[0])
+    # si el título ya dice el número ("97 Antique…"), la segunda línea no lo repite
+    sub = "Printable plates" if titulo.lstrip().startswith(str(n)) else f"{n} printable plates"
+    texto_centrado(d, LIENZO[1] - 115, f"{sub} · instant download", fuente(54), LIENZO[0])
     lienzo.convert("RGB").save(destino, "JPEG", quality=90, dpi=(300, 300))
 
 
@@ -182,25 +185,72 @@ def tamanos(ruta, destino):
     lienzo.convert("RGB").save(destino, "JPEG", quality=90, dpi=(300, 300))
 
 
-def generar(laminas, salida, titulo, n, lado_px):
-    """Genera las 5 imágenes. `laminas`: rutas JPG ya procesadas. Devuelve la lista de archivos."""
+def pin(rutas, destino, titulo, subtitulo):
+    """Pin vertical 2:3 (1000×1500, el formato que Pinterest muestra más grande):
+    una lámina protagonista sobre madera, dos asomando detrás, y el título en una banda."""
+    tam = (1000, 1500)
+    lienzo = fondo("madera.jpg", tam).convert("RGBA")
+    # (lámina, lado mayor, giro, centro x, arriba): dos atrás, abiertas en abanico; la protagonista al frente
+    capas = [(rutas[1], 700, -9, 330, 90), (rutas[2], 700, 8, 670, 80), (rutas[0], 860, 0, 500, 230)]
+    for ruta, lado, ang, cx, y in capas:
+        img = hr.abrir_reducida(ruta, lado * 2)
+        k = lado / max(img.size)
+        img = img.resize((int(img.width * k), int(img.height * k)), Image.LANCZOS).convert("RGBA")
+        if ang:
+            img = img.rotate(ang, resample=Image.BICUBIC, expand=True)
+        con_sombra(lienzo, img, int(cx - img.width / 2), y, desplaz=14, difus=16, opacidad=150)
+    banda_h = 290
+    lienzo.alpha_composite(Image.new("RGBA", (tam[0], banda_h), (244, 232, 205, 240)), (0, tam[1] - banda_h))
+    d = ImageDraw.Draw(lienzo)
+    tam_letra = 64
+    while d.textlength(titulo, font=fuente(tam_letra, negrita=True)) > tam[0] - 80 and tam_letra > 36:
+        tam_letra -= 2
+    texto_centrado(d, tam[1] - banda_h + 55, titulo, fuente(tam_letra, negrita=True), tam[0])
+    texto_centrado(d, tam[1] - banda_h + 150, subtitulo, fuente(38, italica=True), tam[0])
+    texto_centrado(d, tam[1] - banda_h + 210, "Printable · instant download", fuente(34), tam[0])
+    lienzo.convert("RGB").save(destino, "JPEG", quality=90)
+
+
+def generar(laminas, salida, titulo, n, lado_px, vistosas=None, subtitulo=""):
+    """Genera las imágenes del listing. `laminas`: rutas JPG ya procesadas.
+    `vistosas`: láminas ordenadas por color que aún no se usaron (la portada ya tomó las suyas);
+    cada imagen toma láminas distintas para que el listing no repita la misma.
+    Devuelve la lista de archivos."""
     salida = Path(salida)
     salida.mkdir(parents=True, exist_ok=True)
-    vistosas = hr.mas_coloridas(laminas, 8)
+    orden = list(vistosas) if vistosas else hr.ranking_color(laminas)
+    orden = orden or list(laminas)
+    siguiente = 0
+
+    def tomar(k):
+        """Las k siguientes del orden; si el libro es chico se vuelve a empezar
+        (mejor repetir alguna que dejar una imagen vacía)."""
+        nonlocal siguiente
+        r = [orden[(siguiente + j) % len(orden)] for j in range(k)]
+        siguiente += k
+        return r
+
+    p_detalle = tomar(2)
+    p_flatlay = tomar(5)
+    p_incluido = sorted(tomar(8))
+    p_pin = tomar(3)
     hechos = []
-    for k, ruta in enumerate(vistosas[:2], 1):
+    for k, ruta in enumerate(p_detalle, 1):
         destino = salida / f"detalle_{k}.jpg"
         detalle(ruta, destino, titulo)
         hechos.append(destino)
     destino = salida / "flatlay.jpg"
-    flatlay(vistosas, destino, titulo, n)
+    flatlay(p_flatlay, destino, titulo, n)
     hechos.append(destino)
     destino = salida / "incluido.jpg"
-    incluido(vistosas, destino, {"TITULO": titulo, "N": str(n),
-                                 "RESOLUCION": f"300 DPI · up to {lado_px} px", "FORMATO": "JPG"})
+    incluido(p_incluido, destino, {"TITULO": titulo, "N": str(n),
+                                   "RESOLUCION": f"300 DPI · up to {lado_px} px", "FORMATO": "JPG"})
     hechos.append(destino)
     destino = salida / "tamanos.jpg"
-    tamanos(vistosas[0], destino)
+    tamanos(p_detalle[0], destino)  # misma lámina que el primer detalle: aquí solo importa el formato
+    hechos.append(destino)
+    destino = salida / "pin_pinterest.jpg"  # para Pinterest, no para Etsy
+    pin(p_pin, destino, titulo, subtitulo)
     hechos.append(destino)
     return hechos
 
