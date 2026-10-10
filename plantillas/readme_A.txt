@@ -2,7 +2,9 @@
 The Caligari Cabinet
 
 Thank you for your purchase!
-This collection includes {N} complete antique plates, restored from {OBRA} by {AUTOR} ({FECHA}).
+This collection includes {N} complete antique plates from {OBRA} by {AUTOR} ({FECHA}).
+Each plate was taken from a high-resolution scan of the original book, then straightened,
+cropped and given a gentle colour enhancement for printing.
 
 What's included:
  {N} JPG files, one per plate, 300 DPI, up to {LADO_MAX} px on the long side
