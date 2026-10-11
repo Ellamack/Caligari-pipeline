@@ -190,7 +190,8 @@ def main():
         e = m["etapas"]["empaquetar"]
         avisar(f"✅ {ident} listo: {e.get('titulo', '')}\n"
                f"ZIP {e.get('mb')} MB · enlace en el PDF.\n"
-               f"Para Etsy: {e.get('pdf')} + {e.get('muestra')}; imágenes en {bundle}.\n"
+               f"Para Etsy: {e.get('pdf')} + {e.get('muestra')}; "
+               + (f"todo en Drive → {e['kit']}.\n" if e.get("kit") else f"imágenes en {bundle}.\n") +
                "Recuerda agregarlo a la oferta Bundles 50% al publicar.",
                imagen=bundle / "portada.jpg")
         pin = bundle / "mocos" / "pin_pinterest.jpg"

@@ -103,6 +103,46 @@ def aplicar_revision(m):
 
 
 # ---------------------------------------------------------------- paso 2: producto
+def imagenes_listing(finales, bundle, titulo, datos, n, lado):
+    """Portada + mocos + pin. La obra (con su tomo) va en la portada y en el pin: es lo que distingue
+    a los tomos de una misma obra, que si no se verían iguales. Devuelve (portada, [mocos])."""
+    print("Portada del listing…")
+    orden = hr.ranking_color(finales)  # una sola vez: portada y mocos se reparten láminas distintas
+    svg = hr.llenar(PLANTILLAS / "reference_sheet.svg", sorted(orden[:6]),
+                    {"TITULO": titulo, "SUBTITULO": datos["obra"],
+                     "CITA": f"{datos['autor']} · {datos['fecha']} · JPG 300 DPI · Instant download", "N": str(n)},
+                    numeros=False)
+    portada = hr.renderizar(svg, bundle / "portada.jpg")
+    print("Mocos (detalle, flat lay, incluido, tamaños, pin)…")
+    hechos = mocos.generar(finales, bundle / "mocos", titulo, n, lado, vistosas=orden[6:],
+                           subtitulo=datos["obra"], linea3=f"{datos['autor']} · {datos['fecha']} · instant download")
+    return portada, hechos
+
+
+def subir_kit(ident, bundle, prod, pdf=None):
+    """Kit del listing a Drive (Caligari_listings/<ID>/): todo lo que se sube a Etsy, para armar el
+    listing desde cualquier lugar sin scp. Si rclone no está, no pasa nada."""
+    if not drive.disponible():
+        return None
+    carpeta = f"Caligari_listings/{ident}"
+    archivos = [bundle / prod["portada"], bundle / prod["reference"], bundle / prod["muestra"]]
+    archivos += [bundle / x for x in prod.get("mocos") or []]
+    if prod.get("pin"):
+        archivos.append(bundle / prod["pin"])
+    if pdf:
+        archivos.append(pdf)
+    subidos = 0
+    for a in archivos:
+        try:
+            if a.exists():
+                drive.subir(a, carpeta, verificar=False)
+                subidos += 1
+        except Exception as e:  # noqa: BLE001
+            print(f"(kit: no se subió {a.name}: {e})")
+    print(f"Kit del listing en Drive → {carpeta} ({subidos} archivos)")
+    return carpeta
+
+
 def armar_producto(m, datos):
     ident = m["id"]
     carpeta = mf.carpeta(ident)
@@ -130,16 +170,8 @@ def armar_producto(m, datos):
                     {"TITULO": titulo, "SUBTITULO": sub, "CITA": cita, "N": str(n)}, numeros=True)
     ref = hr.renderizar(svg, contenido / f"{base}_reference_sheet.jpg")
     shutil.copy2(ref, bundle / ref.name)  # copia fuera de contenido/: también es imagen del listing
-    print("Portada del listing…")
-    orden = hr.ranking_color(finales)  # una sola vez: portada y mocos se reparten láminas distintas
-    svg = hr.llenar(PLANTILLAS / "reference_sheet.svg", sorted(orden[:6]),
-                    {"TITULO": titulo, "SUBTITULO": f"{datos['autor']} · {datos['fecha']} · JPG 300 DPI",
-                     "CITA": "Instant download", "N": str(n)}, numeros=False)
-    portada = hr.renderizar(svg, bundle / "portada.jpg")
-    print("Mocos (detalle, flat lay, incluido, tamaños)…")
     lado = m["etapas"]["procesar"]["params"].get("lado_max", 3508)
-    hechos = mocos.generar(finales, bundle / "mocos", titulo, n, lado, vistosas=orden[6:],
-                           subtitulo=f"{datos['autor']} · {datos['fecha']}")
+    portada, hechos = imagenes_listing(finales, bundle, titulo, datos, n, lado)
 
     marca = json.loads((PLANTILLAS / "marca.json").read_text(encoding="utf-8"))
     # línea A (láminas tal cual, solo enderezadas y recortadas) o B (restauradas y vectorizadas):
@@ -311,6 +343,9 @@ def main():
         "cita": f"{datos['autor']} ({datos['fecha']}). {meta.get('titulo', '')}. Internet Archive. {meta.get('url', '')}",
     }
     (bundle / "ficha.json").write_text(json.dumps(ficha, ensure_ascii=False, indent=2), encoding="utf-8")
+    kit = subir_kit(args.id, bundle, prod, pdf)
+    if kit:
+        mf.marcar(m, "empaquetar", m["etapas"]["empaquetar"]["estado"], kit=kit)
     mf.marcar(m, "empaquetar", "hecho", enlace=enlace, pdf=pdf.name)
     mf.marcar(m, "ficha", "esperando")
     if not args.conservar:

@@ -189,12 +189,12 @@ def mandar_preguntas(estado, todas=False):
 
 
 # ---------------------------------------------------------------- de Telegram a inbox/
-def lanzar(ident, *extra):
-    """caligari.py en segundo plano: el puente sigue atendiendo mientras el libro avanza."""
+def lanzar(ident, *extra, script="caligari.py"):
+    """Un script del pipeline en segundo plano: el puente sigue atendiendo mientras el libro avanza."""
     log = mf.carpeta(ident) / "registro.log"
     log.parent.mkdir(parents=True, exist_ok=True)
     with open(log, "a", encoding="utf-8") as fh:
-        subprocess.Popen([sys.executable, str(AQUI / "caligari.py"), ident, *extra], cwd=AQUI,
+        subprocess.Popen([sys.executable, str(AQUI / script), ident, *extra], cwd=AQUI,
                          stdout=fh, stderr=subprocess.STDOUT, start_new_session=True)
 
 
@@ -233,7 +233,8 @@ AYUDA = ("Dos tipos de mensaje:\n\n"
          "/nuevo ID — empieza un libro. ej: /nuevo deuitlandschekap41782cram\n"
          "/estado — en qué va cada libro\n"
          "/pendientes — reenvía las preguntas sin contestar\n"
-         "/seguir ID — retoma un libro (p. ej. tras un error)\n\n"
+         "/seguir ID — retoma un libro (p. ej. tras un error)\n"
+         "/imagenes ID — rehace portada, mocos y pin de un libro ya terminado (el enlace no cambia)\n\n"
          "2) RESPUESTAS (sin /): cuando el bot pregunta algo, escribe solo la respuesta que te indica, "
          "p. ej. ok · quitar 67, 98 · umbral 25 · fecha 1779-1782.\n"
          "Si hay varias preguntas abiertas a la vez: mantén presionado el mensaje de la pregunta → Responder.")
@@ -260,6 +261,14 @@ def atender(estado, msg):
                 mandar_preguntas(estado, todas=True)
             else:
                 enviar("No hay preguntas pendientes.")
+        elif orden == "/imagenes":
+            ident = resto.strip()
+            if not ID_VALIDO.match(ident or ""):
+                enviar("Escribe: /imagenes ID   (ej. /imagenes deuitlandschekap31782cram)")
+                return
+            enviar(f"🖼 {ident}: rehago portada, mocos y pin desde el ZIP (el enlace no cambia). Unos minutos…",
+                   responder_a=mid)
+            lanzar(ident, script="rehacer_imagenes.py")
         elif orden in ("/nuevo", "/seguir"):
             partes = [p.strip() for p in re.split(r"[|;]", resto)]
             ident = partes[0]

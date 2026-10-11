@@ -185,7 +185,7 @@ def tamanos(ruta, destino):
     lienzo.convert("RGB").save(destino, "JPEG", quality=90, dpi=(300, 300))
 
 
-def pin(rutas, destino, titulo, subtitulo):
+def pin(rutas, destino, titulo, subtitulo, linea3="Printable · instant download"):
     """Pin vertical 2:3 (1000×1500, el formato que Pinterest muestra más grande):
     una lámina protagonista sobre madera, dos asomando detrás, y el título en una banda."""
     tam = (1000, 1500)
@@ -206,12 +206,15 @@ def pin(rutas, destino, titulo, subtitulo):
     while d.textlength(titulo, font=fuente(tam_letra, negrita=True)) > tam[0] - 80 and tam_letra > 36:
         tam_letra -= 2
     texto_centrado(d, tam[1] - banda_h + 55, titulo, fuente(tam_letra, negrita=True), tam[0])
-    texto_centrado(d, tam[1] - banda_h + 150, subtitulo, fuente(38, italica=True), tam[0])
-    texto_centrado(d, tam[1] - banda_h + 210, "Printable · instant download", fuente(34), tam[0])
+    tam_sub = 38
+    while d.textlength(subtitulo, font=fuente(tam_sub, italica=True)) > tam[0] - 80 and tam_sub > 26:
+        tam_sub -= 2
+    texto_centrado(d, tam[1] - banda_h + 150, subtitulo, fuente(tam_sub, italica=True), tam[0])
+    texto_centrado(d, tam[1] - banda_h + 210, linea3, fuente(34), tam[0])
     lienzo.convert("RGB").save(destino, "JPEG", quality=90)
 
 
-def generar(laminas, salida, titulo, n, lado_px, vistosas=None, subtitulo=""):
+def generar(laminas, salida, titulo, n, lado_px, vistosas=None, subtitulo="", linea3="Printable · instant download"):
     """Genera las imágenes del listing. `laminas`: rutas JPG ya procesadas.
     `vistosas`: láminas ordenadas por color que aún no se usaron (la portada ya tomó las suyas);
     cada imagen toma láminas distintas para que el listing no repita la misma.
@@ -250,7 +253,7 @@ def generar(laminas, salida, titulo, n, lado_px, vistosas=None, subtitulo=""):
     tamanos(p_detalle[0], destino)  # misma lámina que el primer detalle: aquí solo importa el formato
     hechos.append(destino)
     destino = salida / "pin_pinterest.jpg"  # para Pinterest, no para Etsy
-    pin(p_pin, destino, titulo, subtitulo)
+    pin(p_pin, destino, titulo, subtitulo, linea3)
     hechos.append(destino)
     return hechos
 
