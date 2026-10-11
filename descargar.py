@@ -145,6 +145,7 @@ def main():
         "fecha": anio_txt[:20],
         "derechos": nota_derechos,
         "laminas_declaradas": laminas_declaradas(texto(meta.get("description")), texto(meta.get("volume"))),
+        "volumen": texto(meta.get("volume")),
         "url": DETALLE.format(id=ident),
     }
     if m is None:

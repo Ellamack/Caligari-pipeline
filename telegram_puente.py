@@ -39,6 +39,25 @@ MAX_FOTO = 10 * 1024 * 1024   # sendPhoto
 MAX_DOC = 49 * 1024 * 1024    # sendDocument (límite de bots: 50 MB)
 CADA_VENCIDAS = 600           # cada 10 min revisa preguntas cuyo plazo ya venció
 
+# Qué respuestas acepta cada pregunta. Lo que no encaja se rechaza con una explicación y la pregunta
+# sigue abierta (antes, «replay ok» se aceptaba y el libro se quedaba parado).
+_OK = r"(ok|s[ií]|va|vale|listo)[.!]*"
+VALIDA = {
+    "procesar": re.compile(rf"^({_OK}|(umbral\s*)?\d+([.,]\d+)?)$", re.I),
+    "revision": re.compile(rf"^({_OK}|quitar[\s,y]*\d[\d\s,y]*)$", re.I),
+    "enlace": re.compile(r"^https?://\S+$", re.I),
+    "datos": re.compile(rf"^({_OK}|((tema|obra|fecha)\s*[:=]?\s*\S.*\n?)+)$", re.I),
+}
+
+
+def valida(etapa, texto):
+    patron = VALIDA.get(etapa)
+    return True if patron is None else bool(patron.match(texto.strip()))
+
+
+def opciones(formato):
+    return " o ".join(f"«{o.strip()}»" for o in formato.split("|"))
+
 
 # ---------------------------------------------------------------- configuración
 def config():
@@ -144,10 +163,9 @@ def pendientes():
 
 # ---------------------------------------------------------------- de outbox/ a Telegram
 def texto_pregunta(d):
-    t = f"❓ {d['libro']} · {d['etapa']}\n\n{d['pregunta']}\n\nResponde: {d['formato']}"
+    t = f"❓ {d['libro']} · {d['etapa']}\n\n{d['pregunta']}\n\n✍ Escribe solo: {opciones(d['formato'])}"
     if d.get("si_no_respondes") is not None:
-        t += f"\n(si no respondes antes de {d['vence'].replace('T', ' ')}, se toma '{d['si_no_respondes']}')"
-    t += "\n\nContesta respondiendo (reply) a este mensaje."
+        t += f"\n(si no contestas antes de {d['vence'].replace('T', ' ')}, se toma «{d['si_no_respondes']}»)"
     return t
 
 
@@ -182,6 +200,12 @@ def lanzar(ident, *extra):
 
 def contestar(estado, clave, texto, msg_id):
     ident, etapa = clave.rsplit("_", 1)
+    if not valida(etapa, texto):
+        q = mf.BASE / "outbox" / f"{clave}.json"
+        formato = json.loads(q.read_text(encoding="utf-8"))["formato"] if q.exists() else ""
+        enviar(f"No entendí «{texto}» para {ident} · {etapa}. La pregunta sigue abierta.\n"
+               f"Escribe solo: {opciones(formato)}", responder_a=msg_id)
+        return
     destino = mf.BASE / "inbox" / f"{clave}.json"
     destino.parent.mkdir(parents=True, exist_ok=True)
     destino.write_text(json.dumps({"respuesta": texto, "fecha": datetime.now().isoformat(timespec="minutes"),
@@ -204,14 +228,15 @@ def resumen_estado():
     return "\n".join(lineas) + (f"\n\nPreguntas sin contestar: {n} (/pendientes)" if n else "")
 
 
-AYUDA = ("Órdenes:\n"
-         "/nuevo ID | Tema | Obra | Fecha\n"
-         "   ej: /nuevo deuitlandschekap31782cram | Butterfly | De Uitlandsche Kapellen, Vol. III | 1779-1782\n"
+AYUDA = ("Dos tipos de mensaje:\n\n"
+         "1) ÓRDENES (empiezan con /):\n"
+         "/nuevo ID — empieza un libro. ej: /nuevo deuitlandschekap41782cram\n"
          "/estado — en qué va cada libro\n"
          "/pendientes — reenvía las preguntas sin contestar\n"
-         "/seguir ID — reintenta un libro\n\n"
-         "Para contestar una pregunta: responde (reply) a su mensaje. "
-         "Si solo hay una pregunta pendiente, basta con escribir la respuesta.")
+         "/seguir ID — retoma un libro (p. ej. tras un error)\n\n"
+         "2) RESPUESTAS (sin /): cuando el bot pregunta algo, escribe solo la respuesta que te indica, "
+         "p. ej. ok · quitar 67, 98 · umbral 25 · fecha 1779-1782.\n"
+         "Si hay varias preguntas abiertas a la vez: mantén presionado el mensaje de la pregunta → Responder.")
 
 
 def atender(estado, msg):
@@ -236,10 +261,10 @@ def atender(estado, msg):
             else:
                 enviar("No hay preguntas pendientes.")
         elif orden in ("/nuevo", "/seguir"):
-            partes = [p.strip() for p in resto.split("|")]
+            partes = [p.strip() for p in re.split(r"[|;]", resto)]
             ident = partes[0]
             if not ID_VALIDO.match(ident or ""):
-                enviar(f"Ese identificador no parece válido: «{ident}». {AYUDA.splitlines()[1]}")
+                enviar(f"Ese identificador no parece válido: «{ident}». Ejemplo: /nuevo deuitlandschekap41782cram")
                 return
             extra = []
             for bandera, valor in zip(("--tema", "--obra", "--fecha"), partes[1:4]):
@@ -259,14 +284,23 @@ def atender(estado, msg):
         enviar("Esa pregunta ya estaba contestada. /pendientes para ver las abiertas.", responder_a=mid)
         return
     if not clave:
+        # sin "Responder": si solo una pregunta acepta ese texto (p. ej. «quitar 67» solo cabe en la revisión), es esa
+        candidatas = [c for c in abiertas if valida(c.rsplit("_", 1)[1], texto)]
         if len(abiertas) == 1:
             clave = abiertas[0]
+        elif len(candidatas) == 1:
+            clave = candidatas[0]
         elif not abiertas:
             enviar("No hay preguntas pendientes. /ayuda para ver las órdenes.", responder_a=mid)
             return
+        elif not candidatas:
+            enviar(f"No entendí «{texto}». Ninguna pregunta abierta acepta eso; /pendientes te las reenvía "
+                   "con lo que puedes escribir en cada una.", responder_a=mid)
+            return
         else:
-            enviar(f"Hay {len(abiertas)} preguntas abiertas: responde (reply) al mensaje de la que contestas. "
-                   "/pendientes para verlas otra vez.", responder_a=mid)
+            enviar(f"Hay {len(abiertas)} preguntas abiertas y «{texto}» sirve para varias. Mantén presionado el "
+                   "mensaje de la pregunta que contestas → Responder, y escribe ahí. /pendientes las reenvía.",
+                   responder_a=mid)
             return
     contestar(estado, clave, texto, mid)
 

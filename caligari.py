@@ -50,11 +50,76 @@ def umbral_de_respuesta(ident):
     r = mf.respuesta(ident, "procesar")
     if r is None:
         return None
-    if r.strip().lower() in ("ok", "si", "sí", "va"):
+    if OK.match(r.strip()):
         q = mf.BASE / "outbox" / f"{ident}_procesar.json"
         return json.loads(q.read_text(encoding="utf-8")).get("sugerido") if q.exists() else None
     n = re.search(r"\d+(?:[.,]\d+)?", r)
     return float(n.group().replace(",", ".")) if n else None
+
+
+ROMANOS = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"]
+OK = re.compile(r"^(ok|s[ií]|va|vale|listo)[.!]*$", re.I)
+
+
+def sugerir_datos(ident, m):
+    """Tema, obra y fecha para las imágenes del listing, adivinados de la ficha y de libros anteriores."""
+    from empaquetar import fecha_legible, obra_corta
+    meta = m["meta"]
+    tema, obra = meta.get("tema") or "", meta.get("obra") or ""
+    # mismo autor ya trabajado → mismo tema y mismo nombre de obra (Cramer → Butterfly, "De Uitlandsche Kapellen")
+    for p in sorted((mf.BASE / "libros").glob("*/manifiesto.json")):
+        otro = json.loads(p.read_text(encoding="utf-8"))
+        if otro["id"] == ident or otro["meta"].get("autor") != meta.get("autor"):
+            continue
+        tema = tema or otro["meta"].get("tema", "")
+        if not obra and otro["meta"].get("obra"):
+            obra = re.sub(r",?\s*Vol\.?\s*[IVXLC\d]+\s*$", "", otro["meta"]["obra"], flags=re.I)
+    obra = obra or obra_corta(meta.get("titulo", ""))
+    n = re.search(r"\d+", meta.get("volumen") or "")
+    if n and "vol" not in obra.lower() and int(n.group()) < len(ROMANOS):
+        obra = f"{obra}, Vol. {ROMANOS[int(n.group())]}"
+    obra = obra[:1].upper() + obra[1:]
+    return {"tema": tema, "obra": obra, "fecha": fecha_legible(meta)}
+
+
+def paginas_de_portada(ident):
+    """Las primeras páginas del escaneo (ahí están título, tomo y año), en miniaturas grandes."""
+    from procesar_laminas import hoja_contactos
+    crudo = sorted((mf.carpeta(ident) / "crudo" / "paginas").glob("*"))[:8]
+    return hoja_contactos(crudo, mf.carpeta(ident) / "bundle" / "portada_libro.jpg", ancho=520, columnas=4) if crudo else None
+
+
+def datos_listing(ident, m):
+    """True si tema/obra/fecha ya están confirmados; si no, aplica la respuesta o deja la pregunta."""
+    if m["meta"].get("datos_ok"):
+        return True
+    q = mf.BASE / "outbox" / f"{ident}_datos.json"
+    r = mf.respuesta(ident, "datos")
+    if r is not None and q.exists():
+        datos = dict(json.loads(q.read_text(encoding="utf-8")).get("sugerido", {}))
+        if not OK.match(r.strip()):
+            for linea in r.splitlines():
+                c = re.match(r"\s*(tema|obra|fecha)\s*[:=]?\s*(.+)", linea, re.I)
+                if c:
+                    datos[c.group(1).lower()] = c.group(2).strip()
+        if datos.get("tema") and datos.get("obra"):
+            m["meta"].update({"tema": datos["tema"], "obra": datos["obra"], "fecha_mostrar": datos.get("fecha", ""),
+                              "datos_ok": True})
+            mf.guardar(m)
+            return True
+    s = sugerir_datos(ident, m)
+    if r is not None:  # contestó pero falta algo: lo que dijo se conserva en la nueva sugerencia
+        s.update({k: v for k, v in (json.loads(q.read_text(encoding="utf-8")).get("sugerido") or {}).items() if v and not s.get(k)})
+    portada = paginas_de_portada(ident)
+    falta = "" if s["tema"] else "\n⚠ Falta el TEMA (p. ej. Butterfly, Bird, Botanical): escríbelo.\n"
+    mf.preguntar(ident, "datos",
+                 "Datos que verá el comprador en la portada, el pin y el título:\n\n"
+                 f"tema: {s['tema'] or '(falta)'}\nobra: {s['obra']}\nfecha: {s['fecha']}\n{falta}\n"
+                 "Compáralos con las primeras páginas del libro (la foto). Si están bien, escribe ok. "
+                 "Para corregir, escribe solo la línea que cambia, p. ej.:\nfecha 1779-1782",
+                 formato="ok | fecha 1779-1782", adjuntos=[portada] if portada else [], si_no_respondes=None,
+                 sugerido=s)
+    return False
 
 
 def siguiente(ident, m, linea):
@@ -67,6 +132,8 @@ def siguiente(ident, m, linea):
             return ("procesar_laminas.py", ["--libro", ident, "--umbral", str(u)]) if u else None
         return "procesar_laminas.py", ["--libro", ident]
     if not mf.hecho(m, "empaquetar"):
+        if not datos_listing(ident, m):
+            return None
         return "empaquetar.py", [ident]
     return None
 
@@ -90,13 +157,15 @@ def main():
         print(f"{ident}: ya hay otro caligari.py trabajando en este libro.")
         return
 
-    datos_listing = {"tema": a.tema, "obra": a.obra, "fecha_mostrar": a.fecha}
+    datos_cli = {"tema": a.tema, "obra": a.obra, "fecha_mostrar": a.fecha}
     for _ in range(MAX_PASOS):
         m = mf.leer(ident)
-        if m and any(datos_listing.values()):  # tema/obra/fecha de /nuevo: al manifiesto, una vez
-            m["meta"].update({k: v for k, v in datos_listing.items() if v})
+        if m and any(datos_cli.values()):  # tema/obra/fecha de /nuevo: al manifiesto, una vez
+            m["meta"].update({k: v for k, v in datos_cli.items() if v})
+            if a.tema and a.obra:
+                m["meta"]["datos_ok"] = True  # los dio él mismo: no hace falta preguntar
             mf.guardar(m)
-            datos_listing = {}
+            datos_cli = {}
         paso = siguiente(ident, m, a.linea)
         if paso is None:
             break
