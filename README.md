@@ -25,6 +25,10 @@ y tus respuestas al pipeline; `caligari.py` hace avanzar el libro solo hasta la 
 - Para contestar: *reply* al mensaje de la pregunta (si solo hay una abierta, basta escribir).
   Hoja de contactos → `ok` o `quitar 67, 98` (números de página). Umbral que no cuadra → `ok` (usa el sugerido) o `umbral 25`.
 
+Drive (rclone, remoto `caligari`, permiso `drive.file`, cuenta automation.flow.env): `drive.py` sube el ZIP a
+`Caligari_entregas_auto` y saca el enlace público solo; copia hojas de contactos y portadas a `Caligari_Elandres_revision`.
+Si rclone falla, el bot pregunta el enlace a mano (cascada). Probar: `rclone lsf caligari:Caligari_entregas_auto`.
+
 Ver qué hace el bot: `journalctl -u caligari-telegram -f` · Registro de cada libro: `libros/<ID>/registro.log`
 
 ## Instalación en el VPS (una sola vez)

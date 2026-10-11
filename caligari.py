@@ -86,7 +86,11 @@ def paginas_de_portada(ident):
     """Las primeras páginas del escaneo (ahí están título, tomo y año), en miniaturas grandes."""
     from procesar_laminas import hoja_contactos
     crudo = sorted((mf.carpeta(ident) / "crudo" / "paginas").glob("*"))[:8]
-    return hoja_contactos(crudo, mf.carpeta(ident) / "bundle" / "portada_libro.jpg", ancho=520, columnas=4) if crudo else None
+    hoja = hoja_contactos(crudo, mf.carpeta(ident) / "bundle" / "portada_libro.jpg", ancho=520, columnas=4) if crudo else None
+    if hoja:
+        import drive
+        drive.copia_revision(hoja, f"{ident}_portada_libro.jpg")
+    return hoja
 
 
 def datos_listing(ident, m):

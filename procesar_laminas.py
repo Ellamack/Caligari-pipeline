@@ -354,6 +354,8 @@ def modo_libro(ident, forzar_umbral=None):
     if hoja:  # copia a la carpeta de revisión, con el nombre del libro para no confundirlas
         mf.REVISION.mkdir(parents=True, exist_ok=True)
         hoja = Path(shutil.copy2(hoja, mf.REVISION / f"{ident}_hoja_contactos.jpg"))
+        import drive
+        drive.copia_revision(hoja)  # y a Drive → Caligari_Elandres_revision (si rclone está)
     mf.marcar(m, "procesar", "hecho", params=params, origen_umbral=origen,
               paginas=len(archivos), laminas=len(hechas))
     mf.preguntar(ident, "revision",

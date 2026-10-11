@@ -28,6 +28,7 @@ from pathlib import Path
 import manifiesto as mf
 import hoja_referencia as hr
 import mocos
+import drive
 
 AQUI = Path(__file__).parent
 PDF_ENTREGA = "Download_Your_Collection.pdf"  # el comprador lo ve: en inglés
@@ -276,11 +277,20 @@ def main():
     prod = {k: m["etapas"]["empaquetar"].get(k) for k in
             ("titulo", "n", "zip", "mb", "md5", "muestra", "portada", "reference", "mocos", "pin")}
 
-    enlace = args.enlace or mf.respuesta(args.id, "enlace")
+    enlace = args.enlace or mf.respuesta(args.id, "enlace") or etapa.get("enlace")
+    if not enlace and drive.disponible():  # camino automático: rclone sube el ZIP y saca el enlace
+        try:
+            print(f"Subiendo {prod['zip']} ({prod['mb']} MB) a Drive → {drive.ENTREGAS}…")
+            enlace = drive.subir_y_enlazar(bundle / prod["zip"])
+            mf.marcar(m, "empaquetar", "esperando", enlace=enlace, enlace_origen="rclone")
+            print(f"Enlace: {enlace}")
+        except Exception as e:  # noqa: BLE001 — cascada: si falla, se pregunta a mano
+            print(f"No se pudo subir con rclone ({e}); se pregunta el enlace a mano.")
+            enlace = None
     if not enlace:
         mf.preguntar(args.id, "enlace",
-                     f"Sube {prod['zip']} ({prod['mb']} MB) a Drive → Caligari/entregas, compártelo como "
-                     f"'cualquiera con el enlace' y pásame el enlace.",
+                     f"No pude subir el ZIP solo. Sube {prod['zip']} ({prod['mb']} MB) a Drive → Caligari/entregas, "
+                     f"compártelo como 'cualquiera con el enlace' y pásame el enlace.",
                      formato="https://drive.google.com/…", adjuntos=[bundle / prod["zip"]], si_no_respondes=None)
         print("Falta el enlace de descarga. Quedó la pregunta en outbox/ (python3 responder.py).")
         return
