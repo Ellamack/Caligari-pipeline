@@ -220,6 +220,26 @@ def umbral_automatico(colores):
     return round(float(corte), 1)
 
 
+def sugerir_umbral(colores, declaradas):
+    """Cuando el automático no cuadra: el corte (a mitad entre dos valores vecinos) que deja
+    el número de láminas más cercano al declarado; si empatan, el del hueco más grande."""
+    v = sorted(c for c in colores if c > 0)
+    mejor = None
+    for i in range(len(v) - 1):
+        a, b = v[i], v[i + 1]
+        if b == a:
+            continue
+        n = len(v) - (i + 1)
+        clave = (abs(n - declaradas), -(b - a))
+        if mejor is None or clave < mejor[0]:
+            mejor = (clave, round((a + b) / 2, 1), n)
+    return (mejor[1], mejor[2]) if mejor else (None, 0)
+
+
+def tabla_umbrales(colores):
+    return "\n".join(f"umbral {u:>2}: {sum(c >= u for c in colores):>3} láminas" for u in range(10, 61, 5))
+
+
 def numero_pagina(ruta):
     m = re.search(r"(\d+)$", ruta.stem)
     return int(m.group(1)) if m else 0
@@ -304,10 +324,13 @@ def modo_libro(ident, forzar_umbral=None):
             f"{d['color']:5.1f}  {d['papel']:5.0f}  {d['archivo']}" for d in medidas), encoding="utf-8")
         mf.marcar(m, "procesar", "esperando", params=params, origen_umbral=origen,
                   paginas=len(archivos), laminas=len(seleccion))
+        sugerido, n_sug = sugerir_umbral(con_papel, declaradas)
         mf.preguntar(ident, "procesar",
                      f"El umbral automático ({umbral}) da {len(seleccion)} láminas, pero la ficha declara "
-                     f"{declaradas}. Revisa medicion.txt y dime qué umbral usar.",
-                     formato="umbral 23", adjuntos=[tabla], si_no_respondes=None)
+                     f"{declaradas}.\n\n{tabla_umbrales(con_papel)}\n\n"
+                     f"Sugerencia: umbral {sugerido} → {n_sug} láminas.\n"
+                     f"Responde 'ok' para usar la sugerencia, o 'umbral N' para otro.",
+                     formato="ok | umbral 25", adjuntos=[tabla], si_no_respondes=None, sugerido=sugerido)
         print(f"ALTO: no cuadra con las {declaradas} declaradas. Te dejé la pregunta en outbox/.")
         return
 

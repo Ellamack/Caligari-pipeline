@@ -15,6 +15,18 @@ Los formatos que se pasan las etapas están en [CONTRATOS.md](CONTRATOS.md).
 
 Preguntas pendientes: `python3 responder.py` · Contestar: `python3 responder.py ID ETAPA "respuesta"`
 
+## Por Telegram (forma normal de trabajar)
+
+El bot del pipeline (`telegram_puente.py`, servicio `caligari-telegram`) lleva cada pregunta a tu Telegram
+y tus respuestas al pipeline; `caligari.py` hace avanzar el libro solo hasta la siguiente pregunta.
+
+- `/nuevo ID | Tema | Obra | Fecha` — p. ej. `/nuevo deuitlandschekap31782cram | Butterfly | De Uitlandsche Kapellen, Vol. III | 1779-1782`
+- `/estado` · `/pendientes` · `/seguir ID` · `/ayuda`
+- Para contestar: *reply* al mensaje de la pregunta (si solo hay una abierta, basta escribir).
+  Hoja de contactos → `ok` o `quitar 67, 98` (números de página). Umbral que no cuadra → `ok` (usa el sugerido) o `umbral 25`.
+
+Ver qué hace el bot: `journalctl -u caligari-telegram -f` · Registro de cada libro: `libros/<ID>/registro.log`
+
 ## Instalación en el VPS (una sola vez)
 
 ```bash
@@ -24,6 +36,10 @@ python3 -m venv venv
 source venv/bin/activate
 pip install opencv-python-headless numpy pillow cairosvg fpdf2 qrcode
 ```
+
+Bot de Telegram: token en `/etc/caligari/telegram.env` (solo root, nunca en el repo) con
+`TELEGRAM_TOKEN=…` y `TELEGRAM_CHAT_ID=…`; luego
+`cp servicio/caligari-telegram.service /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now caligari-telegram`
 
 Cada vez que entres: `cd /home/minion/caligari/pipeline && source ../venv/bin/activate`
 Para traer cambios del repo: `git pull`

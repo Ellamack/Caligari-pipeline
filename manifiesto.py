@@ -72,8 +72,10 @@ def _inbox(ident, etapa):
     return BASE / "inbox" / f"{ident}_{etapa}.json"
 
 
-def preguntar(ident, etapa, pregunta, formato, adjuntos=(), si_no_respondes=None, horas=12):
-    """Deja una pregunta en outbox/. si_no_respondes=None → espera siempre (lo público)."""
+def preguntar(ident, etapa, pregunta, formato, adjuntos=(), si_no_respondes=None, horas=12, **extra):
+    """Deja una pregunta en outbox/. si_no_respondes=None → espera siempre (lo público).
+    Volver a preguntar anula la respuesta anterior (p. ej. si se reprocesa con otro umbral,
+    la revisión vieja ya no vale). `extra`: datos para quien conteste (p. ej. un umbral sugerido)."""
     from datetime import timedelta
     p = _outbox(ident, etapa)
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -86,7 +88,13 @@ def preguntar(ident, etapa, pregunta, formato, adjuntos=(), si_no_respondes=None
         "si_no_respondes": si_no_respondes,
         "vence": (datetime.now() + timedelta(hours=horas)).isoformat(timespec="minutes")
         if si_no_respondes is not None else None,
+        **extra,
     }
+    sin_plazo = lambda d: {k: v for k, v in d.items() if k != "vence"}  # noqa: E731
+    contestada = _inbox(ident, etapa).exists()
+    if p.exists() and not contestada and sin_plazo(json.loads(p.read_text(encoding="utf-8"))) == sin_plazo(datos):
+        return p  # la misma pregunta sigue abierta: no se reescribe (ni se te vuelve a mandar)
+    _inbox(ident, etapa).unlink(missing_ok=True)  # preguntar de nuevo anula una respuesta vieja
     p.write_text(json.dumps(datos, ensure_ascii=False, indent=2), encoding="utf-8")
     return p
 
