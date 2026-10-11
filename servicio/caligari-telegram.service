@@ -1,1 +1,15 @@
+[Unit]
+Description=Caligari pipeline - puente con Telegram
+After=network-online.target
+Wants=network-online.target
 
+[Service]
+Type=simple
+WorkingDirectory=/home/minion/caligari/pipeline
+EnvironmentFile=/etc/caligari/telegram.env
+ExecStart=/home/minion/caligari/venv/bin/python -u telegram_puente.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
