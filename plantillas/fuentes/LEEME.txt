@@ -1,0 +1,3 @@
+Fuentes de las imágenes del listing (.ttf u .otf). Solo licencias libres (Google Fonts = OFL).
+De Google Fonts usa los archivos de la carpeta static/ del ZIP (no los [wght] variables).
+Los estilos (plantillas/estilos/*.json) dicen qué archivo va en cada papel: titulo, texto, cursiva.

@@ -1,0 +1,9 @@
+{
+  "_nota": "Solo para probar el sistema con una fuente: Lora (Google Fonts). Archivos: Lora-Bold.ttf, Lora-Regular.ttf, Lora-Italic.ttf. Ejemplo de lista de mocos distinta: sin la guía de tamaños y con dos pines.",
+  "fuentes": {
+    "titulo":  {"archivo": "Lora-Bold.ttf"},
+    "texto":   {"archivo": "Lora-Regular.ttf"},
+    "cursiva": {"archivo": "Lora-Italic.ttf"}
+  },
+  "mocos": ["detalle", "flatlay", "detalle", "incluido", "pin", "pin"]
+}

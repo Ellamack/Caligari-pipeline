@@ -10,6 +10,10 @@ Corre siempre en el VPS (servicio systemd caligari-telegram). Hace tres cosas:
        /estado                            en qué va cada libro
        /pendientes                        vuelve a mandar las preguntas sin contestar
        /seguir ID                         reintenta un libro (p. ej. tras un error)
+       /imagenes ID [estilo]              rehace las imágenes del listing (con otro estilo, si se da)
+       /probar ID [estilo]                vista previa de un estilo, sin cambiar nada
+       /estilos                           estilos, fuentes y mocos disponibles
+       /actualizar                        git pull + reinicio del bot
        /ayuda
 
 Seguridad: solo obedece al chat de TELEGRAM_CHAT_ID; lo demás se ignora y se anota.
@@ -234,10 +238,36 @@ AYUDA = ("Dos tipos de mensaje:\n\n"
          "/estado — en qué va cada libro\n"
          "/pendientes — reenvía las preguntas sin contestar\n"
          "/seguir ID — retoma un libro (p. ej. tras un error)\n"
-         "/imagenes ID — rehace portada, mocos y pin de un libro ya terminado (el enlace no cambia)\n\n"
+         "/imagenes ID [estilo] — rehace portada, mocos y pin de un libro ya terminado (el enlace no cambia)\n"
+         "/probar ID [estilo] — vista previa de un estilo, sin cambiar nada\n"
+         "/estilos — estilos, fuentes y mocos disponibles\n"
+         "/actualizar — trae del repo lo último (git pull) y reinicia el bot\n\n"
          "2) RESPUESTAS (sin /): cuando el bot pregunta algo, escribe solo la respuesta que te indica, "
          "p. ej. ok · quitar 67, 98 · umbral 25 · fecha 1779-1782.\n"
          "Si hay varias preguntas abiertas a la vez: mantén presionado el mensaje de la pregunta → Responder.")
+
+
+def actualizar(estado, mid):
+    """git pull del repo y reinicio del bot (systemd lo levanta solo: Restart=always).
+    git corre como el dueño de la carpeta, para no dejar archivos de root en el repo de minion."""
+    import pwd
+    dueno = pwd.getpwuid(AQUI.stat().st_uid).pw_name
+    antes = ["runuser", "-u", dueno, "--"] if os.geteuid() == 0 and dueno != "root" else []
+    git = antes + ["git", "-C", str(AQUI)]
+    r = subprocess.run(git + ["pull", "--ff-only"], capture_output=True, text=True, timeout=120)
+    salida = (r.stdout + r.stderr).strip()[-1500:]
+    if r.returncode != 0:
+        enviar(f"✖ No pude actualizar (no cambié nada):\n{salida}\n\n"
+               "Suele ser por cambios hechos a mano en el VPS: eso se arregla desde la terminal.", responder_a=mid)
+        return
+    if "Already up to date" in salida or "Ya está actualizado" in salida:
+        enviar("✔ Ya estaba al día; no hay nada nuevo en el repo.", responder_a=mid)
+        return
+    ultimo = subprocess.run(git + ["log", "-1", "--format=%h %s"], capture_output=True, text=True).stdout.strip()
+    enviar(f"✔ Actualizado a: {ultimo}\n{salida[-800:]}\n\nReinicio el bot; en ~15 s vuelve (/ayuda para comprobar).",
+           responder_a=mid)
+    guardar_estado(estado)  # con el offset ya avanzado: al volver no repite este /actualizar
+    raise SystemExit(0)  # systemd (Restart=always) lo vuelve a arrancar con el código nuevo
 
 
 def atender(estado, msg):
@@ -261,14 +291,29 @@ def atender(estado, msg):
                 mandar_preguntas(estado, todas=True)
             else:
                 enviar("No hay preguntas pendientes.")
-        elif orden == "/imagenes":
-            ident = resto.strip()
-            if not ID_VALIDO.match(ident or ""):
-                enviar("Escribe: /imagenes ID   (ej. /imagenes deuitlandschekap31782cram)")
+        elif orden in ("/imagenes", "/probar"):
+            partes = resto.split()
+            ident, estilo = (partes + ["", ""])[:2]
+            if not ID_VALIDO.match(ident or "") or (estilo and not re.match(r"^[\w-]{1,40}$", estilo)):
+                enviar(f"Escribe: {orden} ID [estilo]   (ej. {orden} deuitlandschekap31782cram cormorant)\n"
+                       "/estilos para ver los estilos.")
                 return
-            enviar(f"🖼 {ident}: rehago portada, mocos y pin desde el ZIP (el enlace no cambia). Unos minutos…",
-                   responder_a=mid)
-            lanzar(ident, script="rehacer_imagenes.py")
+            if orden == "/probar":
+                enviar(f"👁 {ident}: preparo una vista previa{' con el estilo ' + estilo if estilo else ''}. "
+                       "No cambio nada. Unos minutos…", responder_a=mid)
+                lanzar(ident, *([estilo] if estilo else []), "--prueba", script="rehacer_imagenes.py")
+            else:
+                enviar(f"🖼 {ident}: rehago portada, mocos y pin desde el ZIP"
+                       f"{' con el estilo ' + estilo if estilo else ''} (el enlace no cambia). Unos minutos…",
+                       responder_a=mid)
+                lanzar(ident, *([estilo] if estilo else []), script="rehacer_imagenes.py")
+        elif orden == "/estilos":
+            r = subprocess.run([sys.executable, str(AQUI / "diseno.py")], cwd=AQUI, capture_output=True,
+                               text=True, timeout=60)
+            enviar((r.stdout or r.stderr or "sin respuesta")[-3500:]
+                   + "\n\nPara verlos: /probar ID estilo · para aplicarlos: /imagenes ID estilo")
+        elif orden == "/actualizar":
+            actualizar(estado, mid)
         elif orden in ("/nuevo", "/seguir"):
             partes = [p.strip() for p in re.split(r"[|;]", resto)]
             ident = partes[0]

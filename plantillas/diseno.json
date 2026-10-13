@@ -1,0 +1,28 @@
+{
+  "_nota": "Estilo BASE de las imágenes del listing. Cambia lo que quieras y guarda; vale para todos los libros que no tengan otro estilo. Fuentes: archivos .ttf/.otf en plantillas/fuentes/ (vacío = DejaVu Serif). escala: 1.0 = tamaño normal, 1.2 = 20% más grande. Fondos: archivos en plantillas/ o plantillas/fondos/. mocos: qué imágenes se hacen y en qué orden (detalle, flatlay, incluido, tamanos, pin); se pueden repetir o quitar.",
+  "fuentes": {
+    "titulo":  {"archivo": "", "escala": 1.0},
+    "texto":   {"archivo": "", "escala": 1.0},
+    "cursiva": {"archivo": "", "escala": 1.0}
+  },
+  "colores": {
+    "tinta": "#2b1d12",
+    "tinta_suave": "#3b2a1c",
+    "banda": "#f4e8cd",
+    "banda_opacidad": 240,
+    "marco": "#faf5e8",
+    "recuadro": "#b41e1e"
+  },
+  "fondos": {
+    "madera": "madera.jpg",
+    "papel": "papel.jpg"
+  },
+  "textos": {
+    "detalle": "Every detail, at full resolution",
+    "tamanos": "Print at home or at any print shop",
+    "tamanos_nota": "300 DPI files · also great for larger frames at gallery resolution",
+    "flatlay_n": "{n} printable plates · instant download",
+    "flatlay_sin_n": "Printable plates · instant download"
+  },
+  "mocos": ["detalle", "detalle", "flatlay", "incluido", "tamanos", "pin"]
+}

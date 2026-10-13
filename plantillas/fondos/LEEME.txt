@@ -1,0 +1,2 @@
+Texturas extra (madera_oscura.jpg, papel_crema.jpg…). Un estilo las elige en "fondos".
+Mínimo 2400 px de lado; JPG.

@@ -26,6 +26,7 @@ import zipfile
 from pathlib import Path
 
 import manifiesto as mf
+import diseno
 import hoja_referencia as hr
 import mocos
 import drive
@@ -103,6 +104,13 @@ def aplicar_revision(m):
 
 
 # ---------------------------------------------------------------- paso 2: producto
+def estilo_del_libro(m):
+    """(estilo, ajustes) del libro para diseno.usar: meta.estilo elige plantillas/estilos/<estilo>.json;
+    meta.mocos (opcional) cambia la lista de mocos solo para este libro."""
+    meta = m["meta"]
+    return meta.get("estilo"), ({"mocos": meta["mocos"]} if meta.get("mocos") else None)
+
+
 def imagenes_listing(finales, bundle, titulo, datos, n, lado):
     """Portada + mocos + pin. La obra (con su tomo) va en la portada y en el pin: es lo que distingue
     a los tomos de una misma obra, que si no se verían iguales. Devuelve (portada, [mocos])."""
@@ -127,8 +135,8 @@ def subir_kit(ident, bundle, prod, pdf=None):
     carpeta = f"Caligari_listings/{ident}"
     archivos = [bundle / prod["portada"], bundle / prod["reference"], bundle / prod["muestra"]]
     archivos += [bundle / x for x in prod.get("mocos") or []]
-    if prod.get("pin"):
-        archivos.append(bundle / prod["pin"])
+    for pin in prod.get("pines") or ([prod["pin"]] if prod.get("pin") else []):  # el estilo puede pedir varios
+        archivos.append(bundle / pin)
     if pdf:
         archivos.append(pdf)
     subidos = 0
@@ -165,6 +173,7 @@ def armar_producto(m, datos):
     sub = f"{datos['obra']} · {datos['autor']} · {datos['fecha']}"
     cita = f"Originally published by {datos['autor']}, {datos['fecha']}. Digitized by the Internet Archive."
 
+    print(diseno.usar(*estilo_del_libro(m)) and diseno.resumen())  # letra, fondos y mocos de este libro
     print(f"Reference Sheet de {n} láminas…")
     svg = hr.llenar(PLANTILLAS / "reference_sheet.svg", finales,
                     {"TITULO": titulo, "SUBTITULO": sub, "CITA": cita, "N": str(n)}, numeros=True)
@@ -204,7 +213,8 @@ def armar_producto(m, datos):
             "mb": round(zip_completo.stat().st_size / 1e6, 1), "md5": md5_de(zip_completo),
             "muestra": muestra.name, "portada": portada.name, "reference": ref.name,
             "mocos": [f"mocos/{h.name}" for h in hechos if not h.name.startswith("pin_")],
-            "pin": next((f"mocos/{h.name}" for h in hechos if h.name.startswith("pin_")), None)}
+            "pin": next((f"mocos/{h.name}" for h in hechos if h.name.startswith("pin_")), None),
+            "pines": [f"mocos/{h.name}" for h in hechos if h.name.startswith("pin_")]}
 
 
 # ---------------------------------------------------------------- paso 4: PDF + ficha
@@ -307,7 +317,7 @@ def main():
         mf.marcar(m, "empaquetar", "esperando", **prod)
         print(f"ZIP completo: {bundle / prod['zip']}  ({prod['mb']} MB, md5 {prod['md5']})")
     prod = {k: m["etapas"]["empaquetar"].get(k) for k in
-            ("titulo", "n", "zip", "mb", "md5", "muestra", "portada", "reference", "mocos", "pin")}
+            ("titulo", "n", "zip", "mb", "md5", "muestra", "portada", "reference", "mocos", "pin", "pines")}
 
     enlace = args.enlace or mf.respuesta(args.id, "enlace") or etapa.get("enlace")
     if not enlace and drive.disponible():  # camino automático: rclone sube el ZIP y saca el enlace

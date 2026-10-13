@@ -194,9 +194,11 @@ def main():
                + (f"todo en Drive → {e['kit']}.\n" if e.get("kit") else f"imágenes en {bundle}.\n") +
                "Recuerda agregarlo a la oferta Bundles 50% al publicar.",
                imagen=bundle / "portada.jpg")
-        pin = bundle / "mocos" / "pin_pinterest.jpg"
-        if pin.exists():
-            avisar(f"{ident} · pin vertical para Pinterest", imagen=pin)
+        pines = sorted((bundle / "mocos").glob("pin_*.jpg"))
+        for k, pin in enumerate(pines, 1):
+            avisar(f"{ident} · pin vertical para Pinterest {k}/{len(pines)}", imagen=pin)
+        avisar(f"¿Otro look? /probar {ident} ESTILO te muestra el listing con otro estilo sin cambiar nada "
+               "(/estilos para verlos).")
     elif m and not any(q for q in (mf.BASE / "outbox").glob(f"{ident}_*.json")
                        if not (mf.BASE / "inbox" / q.name).exists()):
         estados = ", ".join(f"{k}: {v['estado']}" for k, v in m["etapas"].items())

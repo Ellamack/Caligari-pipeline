@@ -1,0 +1,8 @@
+{
+  "_nota": "Grabado clásico: todo en Cormorant Garamond (Google Fonts). Sube a plantillas/fuentes/ los archivos de la carpeta static/ del ZIP: CormorantGaramond-Bold.ttf, CormorantGaramond-Medium.ttf y CormorantGaramond-Italic.ttf. Cormorant es de letra chica: por eso la escala es mayor que 1.",
+  "fuentes": {
+    "titulo":  {"archivo": "CormorantGaramond-Bold.ttf", "escala": 1.18},
+    "texto":   {"archivo": "CormorantGaramond-Medium.ttf", "escala": 1.15},
+    "cursiva": {"archivo": "CormorantGaramond-Italic.ttf", "escala": 1.15}
+  }
+}

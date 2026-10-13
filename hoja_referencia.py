@@ -29,6 +29,8 @@ from pathlib import Path
 
 from PIL import Image
 
+import diseno
+
 SVG = "http://www.w3.org/2000/svg"
 XLINK = "http://www.w3.org/1999/xlink"
 ET.register_namespace("", SVG)
@@ -75,6 +77,25 @@ def mejor_cuadricula(n, ancho, alto, aspecto, alto_etiqueta):
     return mejor[1:]
 
 
+def aplicar_estilo(raiz):
+    """Fuentes, tamaños y colores del estilo activo (diseno.py) sobre los textos de la plantilla.
+    Papel de cada texto: data-rol, o negrita → titulo, cursiva → cursiva, lo demás → texto."""
+    colores = {"#2b1d12": diseno.hex_color("tinta"), "#3b2a1c": diseno.hex_color("tinta_suave")}
+    for el in raiz.iter():
+        if el.get("font-family") is None and el.get("data-rol") is None:
+            continue
+        rol = el.get("data-rol") or ("titulo" if el.get("font-weight") == "bold"
+                                     else "cursiva" if el.get("font-style") == "italic" else "texto")
+        familia, peso, estilo = diseno.familia_svg(rol)
+        el.set("font-family", familia)
+        el.set("font-weight", peso)
+        el.set("font-style", estilo)
+        if el.get("font-size"):
+            el.set("font-size", f"{float(el.get('font-size')) * diseno.escala(rol):.1f}")
+        if (el.get("fill") or "").lower() in colores:
+            el.set("fill", colores[el.get("fill").lower()])
+
+
 def llenar(plantilla, laminas, campos, numeros=True):
     texto = plantilla.read_text(encoding="utf-8")
     for clave, valor in campos.items():
@@ -86,10 +107,13 @@ def llenar(plantilla, laminas, campos, numeros=True):
         href = el.get("href") or el.get(f"{{{XLINK}}}href")
         if href and not href.startswith("data:"):
             ruta = (plantilla.parent / href).resolve()
+            if Path(href).stem in ("madera", "papel"):  # la textura la elige el estilo (diseno.json)
+                ruta = diseno.ruta_fondo(Path(href).stem)
             if ruta.exists():
                 uri = a_data_uri(ruta, lado_max=2400, calidad=88)
                 el.set(f"{{{XLINK}}}href", uri)
                 el.attrib.pop("href", None)
+    aplicar_estilo(raiz)
     # área de la cuadrícula
     caja = next(el for el in raiz.iter(f"{{{SVG}}}rect") if el.get("id") == "cuadricula")
     x0, y0 = float(caja.get("x")), float(caja.get("y"))
@@ -132,8 +156,8 @@ def llenar(plantilla, laminas, campos, numeros=True):
         if numeros:
             t = ET.SubElement(grupo, f"{{{SVG}}}text", {
                 "x": f"{cx:.1f}", "y": f"{top + h + etiqueta * 0.72:.1f}", "text-anchor": "middle",
-                "font-family": "Georgia, 'DejaVu Serif', serif",
-                "font-size": f"{max(14, min(ch * 0.065, etiqueta * 0.6)):.0f}", "fill": "#3b2a1c"})
+                "font-family": diseno.familia_svg("texto")[0],
+                "font-size": f"{max(14, min(ch * 0.065, etiqueta * 0.6)):.0f}", "fill": diseno.hex_color("tinta_suave")})
             t.text = str(k + 1)
     padre.insert(indice, grupo)
     return ET.tostring(raiz, encoding="unicode")
@@ -143,6 +167,7 @@ def renderizar(svg_texto, destino, ancho=None):
     destino = Path(destino)
     png = destino.with_suffix(".tmp.png")
     try:
+        diseno.preparar_fontconfig()  # antes de cargar cairo: así ve plantillas/fuentes/
         import cairosvg
         cairosvg.svg2png(bytestring=svg_texto.encode("utf-8"), write_to=str(png), output_width=ancho)
     except (ImportError, OSError):

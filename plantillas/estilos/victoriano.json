@@ -1,0 +1,10 @@
+{
+  "_nota": "Títulos en Playfair Display y textos en IM Fell English (letra de imprenta antigua). Archivos para plantillas/fuentes/: PlayfairDisplay-Bold.ttf (carpeta static/ del ZIP), IMFellEnglish-Regular.ttf, IMFellEnglish-Italic.ttf. Si subes una madera más oscura como plantillas/fondos/madera_oscura.jpg, la usa; si no, la de siempre.",
+  "fuentes": {
+    "titulo":  {"archivo": "PlayfairDisplay-Bold.ttf", "escala": 1.0},
+    "texto":   {"archivo": "IMFellEnglish-Regular.ttf", "escala": 1.08},
+    "cursiva": {"archivo": "IMFellEnglish-Italic.ttf", "escala": 1.08}
+  },
+  "colores": {"tinta": "#1f140c", "banda": "#efe2c4"},
+  "fondos": {"madera": "madera_oscura.jpg"}
+}
