@@ -1,0 +1,30 @@
+{
+  "_nota": "Reglas del validador de Caligari (base de conocimiento, capa 4.1 y 4.4). Se editan aquí, no en el código.",
+  "titulo_max_palabras": 14,
+  "titulo_max_caracteres": 140,
+  "tags_exactos": 13,
+  "tag_max_caracteres": 20,
+  "max_solapamiento_hermanos": 0.5,
+  "palabras_prohibidas_linea_A": [
+    "restor"
+  ],
+  "tags_prohibidos": {
+    "_nota": "tag: motivo. Se marcan en la auditoría y el generador nunca los propone. Decidido 13 oct 2026.",
+    "cricut svg": "no son archivos de corte: SVG a color apilado (~34 colores, cientos de trazos); una cortadora lo vería como cientos de capas",
+    "cricut_svg": "no son archivos de corte: SVG a color apilado (~34 colores, cientos de trazos); una cortadora lo vería como cientos de capas",
+    "cricut": "no son archivos de corte: SVG a color apilado (~34 colores, cientos de trazos); una cortadora lo vería como cientos de capas",
+    "laser cut file": "no son archivos de corte: SVG a color apilado (~34 colores, cientos de trazos); una cortadora lo vería como cientos de capas",
+    "laser_cut_file": "no son archivos de corte: SVG a color apilado (~34 colores, cientos de trazos); una cortadora lo vería como cientos de capas",
+    "laser cut": "no son archivos de corte: SVG a color apilado (~34 colores, cientos de trazos); una cortadora lo vería como cientos de capas",
+    "cut file": "no son archivos de corte: SVG a color apilado (~34 colores, cientos de trazos); una cortadora lo vería como cientos de capas",
+    "svg cut file": "no son archivos de corte: SVG a color apilado (~34 colores, cientos de trazos); una cortadora lo vería como cientos de capas"
+  },
+  "palabras_subjetivas_titulo": [
+    "beautiful",
+    "perfect",
+    "stunning",
+    "amazing",
+    "gorgeous",
+    "best"
+  ]
+}

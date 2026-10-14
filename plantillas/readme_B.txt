@@ -4,12 +4,13 @@ The Caligari Cabinet
 Thank you for your purchase!
 This collection includes {N} antique illustrations from {OBRA} by {AUTOR} ({FECHA}).
 Each illustration was digitally restored from a high-resolution scan of the original plate:
-the paper background was removed, stains and damage were cleaned and retouched by hand,
-and the result was carefully vectorized into a scalable SVG.
+the paper background was removed, stains and damage were cleaned, every figure was reviewed
+by eye and retouched by hand where needed, and the result was vectorized into a scalable SVG.
 
 What's included:
  {N} SVG files, one per illustration (scale to any size without losing quality)
  {N} PNG files with transparent background, 300 DPI
+ Numbered reference sheet
  This README
 
 Illustrations:

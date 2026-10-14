@@ -74,6 +74,19 @@ def subir_y_enlazar(ruta, carpeta=ENTREGAS):
     return enlace(subir(ruta, carpeta))
 
 
+def bajar(remoto, local):
+    """Baja un archivo de Drive (ruta relativa al remoto, p. ej. "Caligari_Elandres_revision/x/y.png").
+    Ojo: con permiso drive.file rclone solo ve archivos que él creó. Si Elandrés sube una versión
+    nueva con "Reemplazar el archivo existente", es el MISMO archivo y sí se ve; si lo sube como
+    archivo nuevo ("conservar ambos"), no. Devuelve True si bajó algo."""
+    try:
+        r = _rclone("copyto", f"{REMOTO}:{remoto}", str(local), timeout=600)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        print(f"(no se pudo bajar {remoto}: {e})")
+        return False
+    return r.returncode == 0 and Path(local).exists()
+
+
 def copia_revision(ruta, nombre=None):
     """Copia (sin enlace público) a la carpeta de revisión. Nunca falla: es solo comodidad."""
     try:

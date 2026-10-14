@@ -24,7 +24,8 @@ from PIL import Image
 
 import diseno
 import manifiesto as mf
-from empaquetar import autor_legible, estilo_del_libro, fecha_legible, imagenes_listing, obra_corta, subir_kit
+from empaquetar import (autor_legible, estilo_del_libro, fecha_legible, imagenes_listing, obra_corta,
+                        subir_kit, vistas_b)
 from telegram_puente import avisar
 
 
@@ -82,13 +83,18 @@ def main():
     destino = tmp / "bundle" if prueba else bundle  # la prueba no pisa las imágenes buenas
     destino.mkdir(exist_ok=True)
     try:
+        linea = m.get("linea", "A")
         with zipfile.ZipFile(zip_completo) as z:
             for n in z.namelist():
-                if "_plate_" in n and n.lower().endswith(".jpg"):
+                if (linea == "B" and n.startswith("PNG/") and n.lower().endswith(".png")) or \
+                        ("_plate_" in n and n.lower().endswith(".jpg")):
                     z.extract(n, tmp / "laminas")
-        finales = sorted((tmp / "laminas").rglob("*_plate_*.jpg"))
-        print(f"{len(finales)} láminas sacadas del ZIP")
-        portada, hechos = imagenes_listing(finales, destino, e["titulo"], datos, len(finales), lado)
+        if linea == "B":  # figuras transparentes → sobre papel (si no, la transparencia sale negra)
+            finales = vistas_b(sorted((tmp / "laminas").rglob("*.png")), tmp / "vistas")
+        else:
+            finales = sorted((tmp / "laminas").rglob("*_plate_*.jpg"))
+        print(f"{len(finales)} {'figuras' if linea == 'B' else 'láminas'} sacadas del ZIP")
+        portada, hechos = imagenes_listing(finales, destino, e["titulo"], datos, len(finales), lado, linea=linea)
         if prueba:
             vista = vista_previa([portada] + hechos, tmp / "vista_previa.jpg")
             avisar(f"👁 Prueba de estilo «{diseno.actual()['nombre']}» para {ident} "

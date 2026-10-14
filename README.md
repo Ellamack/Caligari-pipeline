@@ -121,3 +121,26 @@ corren no incluyen listings nuevos. Precios: política en el roadmap del proyect
 - Grabar (Win+Alt+R): `sudo python3 pinterest_demo.py bundle/mocos/pin_pinterest.jpg "https://www.etsy.com/listing/…"`.
   Hace OAuth → lee cuenta y tableros → crea tablero si falta → publica un pin (Sandbox) → lo vuelve a leer.
 - Subir el video en My apps → Upgrade. Pinterest también exige un enlace de política de privacidad en un dominio propio.
+
+## Línea B por Telegram: restaurado + SVG (13 oct 2026)
+
+`/nuevo ID b` → igual que la A hasta la hoja de contactos; luego `restaurar.py` (lo encadena caligari.py):
+1. **fondo**: tira de 5 umbrales sobre la lámina más colorida → `ok` (el del centro) o `umbral 26`.
+2. **figuras**: `quitar_fondo.py --separar` en todas las láminas; hojas con cada figura numerada sobre gris →
+   `ok` · `quitar 3, 7` · `retocar 12` · `quitar 3 retocar 12` · `umbral 30` (recorta todo de nuevo).
+3. **retoque** (si pediste): las figuras van a Drive → `Caligari_Elandres_revision/<ID>_retoque/`; se retocan en GIMP
+   y se suben con el mismo nombre eligiendo «Reemplazar el archivo existente» → `listo`.
+4. `vectorizar.py` → SVG.
+5. Piezas sueltas: en la revisión de figuras, `sueltas 5, 18` → pregunta **especies** (`5: death's head hawkmoth | Acherontia atropos`,
+   una línea por figura). `sueltas.py` arma `bundle/sueltas/<n>_<nombre>/` con SVG + PNG (se suben directo a Etsy),
+   portada (figura sola, sin texto), detalle, ficha de lo que incluye y pin. Después: datos del listing → `empaquetar.py` arma ZIP con `SVG/`, `PNG/`, README B y
+   Reference Sheet; portada, mocos y pin usan cada figura sobre papel claro (`vistas_b`).
+Requiere en el venv: `pip install vtracer opencv-python-headless`.
+
+## Caligari (SEO) — carpeta `seo/`
+- `/seo` en Telegram: foto del catálogo por API + auditoría (solo lee; no usa modelo, costo cero).
+- `sudo python3 -m seo.modelo --llave`: guarda proveedor (deepseek/anthropic), modelo y llave en `/etc/caligari/llm.env`.
+- `sudo python3 -m seo.generar --listing ID` o `--libro ID`: propuesta de título, 13 tags y descripción,
+  validada (hasta 3 intentos). Se guarda en `seo/datos/propuestas/`; no toca Etsy. Gasto en `seo/datos/gasto.jsonl`.
+- `/mercado [término]` o `sudo python3 -m seo.mercado`: por término (de `seo/terminos.txt`), competencia (listings activos)
+  y señales de demanda de la primera página (vistas/día, favoritos/día, % digital, precio). API pública; sin modelo.

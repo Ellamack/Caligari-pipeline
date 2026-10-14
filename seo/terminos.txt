@@ -1,0 +1,53 @@
+# Términos para seo/mercado.py — diseñados como experimento, no como lista suelta.
+#
+# 1) CUADRÍCULA: cada tema × cada uso → "vintage <tema> <uso>". Responde a la pregunta central:
+#    ¿qué se busca más y dónde hay menos competencia: el producto terminado (wall art, print, frame tv)
+#    o el material (clipart, png, svg, junk journal)? Y ¿qué tema rinde más con cada uso?
+#    Todo con "vintage" para que los términos sean comparables entre sí y sean de nuestro nicho.
+temas: butterfly, moth, beetle, insect, bird, botanical, mushroom, seashell, fish, jellyfish
+usos: wall art, print, frame tv art, clipart, png, svg, junk journal, ephemera, fussy cuts
+#
+# 2) GRUPOS: preguntas puntuales. Cada "## nombre" agrupa los términos de abajo en el informe.
+## control: ¿cuánto cambia con y sin "vintage"? ¿y "antique"?
+butterfly wall art
+butterfly clipart
+antique butterfly print
+antique bird print
+## especies con nombre propio (candidatas a piezas sueltas)
+luna moth
+death's head moth
+blue morpho butterfly
+monarch butterfly print
+atlas moth
+hummingbird print
+cardinal bird print
+owl print vintage
+## autores y obras (búsqueda específica: poca competencia, mucha relevancia)
+audubon print
+haeckel print
+redoute rose print
+merian print
+cramer butterfly
+## temporada (producir 2–3 meses antes)
+christmas bird print
+winter bird art
+vintage christmas botanical
+valentine botanical print
+spring butterfly print
+halloween moth
+## estética y usos
+dark academia decor
+cabinet of curiosities
+entomology print
+natural history print
+cottagecore wall art
+gallery wall set vintage
+apothecary clipart
+medicinal herb print
+vintage herbal ephemera
+
+## autenticidad y formato
+not ai clipart
+public domain clipart
+vintage vector illustration
+vintage clipart bundle

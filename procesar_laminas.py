@@ -319,6 +319,18 @@ def modo_libro(ident, forzar_umbral=None):
     params["solo_color"] = umbral
 
     if origen == "auto" and not cuadra:
+        # El automático no cuadra con la ficha, pero si algún corte sí cuadra, se usa ese sin preguntar
+        # (mismo margen de tolerancia con el que se acepta el automático). Solo se pregunta si ninguno cuadra.
+        sugerido, n_sug = sugerir_umbral(con_papel, declaradas)
+        if sugerido is not None and abs(n_sug - declaradas) <= tolerancia:
+            print(f"El automático ({umbral}) no cuadra; el corte {sugerido} da {n_sug} ≈ {declaradas} declaradas: lo uso.")
+            umbral, origen, cuadra = sugerido, "ajustado_a_ficha", True
+            seleccion = [d for d in medidas if d["papel"] >= params["min_papel"] and d["color"] >= umbral]
+            for d in medidas:
+                d["incluida"] = d in seleccion
+            params["solo_color"] = umbral
+
+    if origen == "auto" and not cuadra:
         tabla = mf.carpeta(ident) / "medicion.txt"
         tabla.write_text("color  papel%  archivo\n" + "\n".join(
             f"{d['color']:5.1f}  {d['papel']:5.0f}  {d['archivo']}" for d in medidas), encoding="utf-8")
@@ -358,8 +370,11 @@ def modo_libro(ident, forzar_umbral=None):
         drive.copia_revision(hoja)  # y a Drive → Caligari_Elandres_revision (si rclone está)
     mf.marcar(m, "procesar", "hecho", params=params, origen_umbral=origen,
               paginas=len(archivos), laminas=len(hechas))
+    nota = {"auto": "", "manual": f" (umbral {umbral}, el que elegiste)",
+            "ajustado_a_ficha": f" (umbral {umbral}, ajustado solo para cuadrar con las {declaradas} que declara la ficha)"
+            }.get(origen, "")
     mf.preguntar(ident, "revision",
-                 f"{len(hechas)} láminas seleccionadas. ¿Quitar alguna? (números de la hoja de contactos)",
+                 f"{len(hechas)} láminas seleccionadas{nota}. ¿Quitar alguna? (números de la hoja de contactos)",
                  formato="ok | quitar 7,64", adjuntos=[hoja] if hoja else [], si_no_respondes="ok", horas=12)
     mf.marcar(m, "revision", "esperando")
     print(f"Listo: {len(hechas)} láminas en {salida}. Hoja de contactos: {hoja}")

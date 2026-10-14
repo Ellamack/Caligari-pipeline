@@ -6,7 +6,7 @@ Corre siempre en el VPS (servicio systemd caligari-telegram). Hace tres cosas:
   2. Tus respuestas las escribe en inbox/ (el mismo archivo que escribe responder.py)
      y lanza caligari.py para que el libro siga solo hasta la próxima pregunta.
   3. Órdenes:
-       /nuevo ID | Tema | Obra | Fecha   empieza un libro (tema, obra y fecha opcionales)
+       /nuevo ID [b] | Tema | Obra | Fecha   empieza un libro (b = línea B; tema, obra y fecha opcionales)
        /estado                            en qué va cada libro
        /pendientes                        vuelve a mandar las preguntas sin contestar
        /seguir ID                         reintenta un libro (p. ej. tras un error)
@@ -50,6 +50,10 @@ VALIDA = {
     "procesar": re.compile(rf"^({_OK}|(umbral\s*)?\d+([.,]\d+)?)$", re.I),
     "revision": re.compile(rf"^({_OK}|quitar[\s,y]*\d[\d\s,y]*)$", re.I),
     "enlace": re.compile(r"^https?://\S+$", re.I),
+    "fondo": re.compile(rf"^({_OK}|(umbral\s*)?\d+([.,]\d+)?)$", re.I),
+    "figuras": re.compile(rf"^({_OK}|umbral\s*\d+([.,]\d+)?|((quitar|retocar|sueltas?)[\s,y]*\d[\d\s,y]*)+)$", re.I),
+    "especies": re.compile(r"^(\s*\d+\s*[:.)\-–]?\s*\S.*\n?)+$", re.I),
+    "retoque": re.compile(rf"^({_OK})$", re.I),
     "datos": re.compile(rf"^({_OK}|((tema|obra|fecha)\s*[:=]?\s*\S.*\n?)+)$", re.I),
 }
 
@@ -235,15 +239,18 @@ def resumen_estado():
 AYUDA = ("Dos tipos de mensaje:\n\n"
          "1) ÓRDENES (empiezan con /):\n"
          "/nuevo ID — empieza un libro. ej: /nuevo deuitlandschekap41782cram\n"
+         "/nuevo ID b — lo mismo, en línea B (quitar fondo, revisar figuras, retoque, SVG)\n"
          "/estado — en qué va cada libro\n"
          "/pendientes — reenvía las preguntas sin contestar\n"
          "/seguir ID — retoma un libro (p. ej. tras un error)\n"
          "/imagenes ID [estilo] — rehace portada, mocos y pin de un libro ya terminado (el enlace no cambia)\n"
          "/probar ID [estilo] — vista previa de un estilo, sin cambiar nada\n"
          "/estilos — estilos, fuentes y mocos disponibles\n"
-         "/actualizar — trae del repo lo último (git pull) y reinicia el bot\n\n"
+         "/actualizar — trae del repo lo último (git pull) y reinicia el bot\n"
+         "/seo — Caligari audita la tienda: problemas de títulos y tags, tags repetidos, vistas (solo lee)\n"
+         "/mercado [término] — competencia y tráfico en Etsy (todos los de seo/terminos.txt, o solo ese término)\n\n"
          "2) RESPUESTAS (sin /): cuando el bot pregunta algo, escribe solo la respuesta que te indica, "
-         "p. ej. ok · quitar 67, 98 · umbral 25 · fecha 1779-1782.\n"
+         "p. ej. ok · quitar 67, 98 · umbral 25 · fecha 1779-1782 · retocar 12 · listo.\n"
          "Si hay varias preguntas abiertas a la vez: mantén presionado el mensaje de la pregunta → Responder.")
 
 
@@ -312,11 +319,26 @@ def atender(estado, msg):
                                text=True, timeout=60)
             enviar((r.stdout or r.stderr or "sin respuesta")[-3500:]
                    + "\n\nPara verlos: /probar ID estilo · para aplicarlos: /imagenes ID estilo")
+        elif orden == "/seo":
+            enviar("🔎 Caligari: leo el catálogo de Etsy y lo reviso con las reglas de SEO. Un minuto…", responder_a=mid)
+            log = mf.BASE / "seo_auditoria.log"
+            with open(log, "a", encoding="utf-8") as fh:
+                subprocess.Popen([sys.executable, "-m", "seo.auditar", "--telegram"], cwd=AQUI,
+                                 stdout=fh, stderr=subprocess.STDOUT, start_new_session=True)
+        elif orden == "/mercado":
+            enviar("📊 Mido competencia y tráfico en Etsy para los términos de seo/terminos.txt"
+                   + (f" + «{resto.strip()}»" if resto.strip() else "") + ". Un par de minutos…", responder_a=mid)
+            extra = [resto.strip()] if resto.strip() else []
+            with open(mf.BASE / "seo_mercado.log", "a", encoding="utf-8") as fh:
+                subprocess.Popen([sys.executable, "-m", "seo.mercado", *extra, "--telegram"], cwd=AQUI,
+                                 stdout=fh, stderr=subprocess.STDOUT, start_new_session=True)
         elif orden == "/actualizar":
             actualizar(estado, mid)
         elif orden in ("/nuevo", "/seguir"):
             partes = [p.strip() for p in re.split(r"[|;]", resto)]
-            ident = partes[0]
+            primero = partes[0].split()
+            ident = primero[0] if primero else ""
+            linea_b = len(primero) > 1 and primero[1].lower() in ("b", "linea_b", "lineab")
             if not ID_VALIDO.match(ident or ""):
                 enviar(f"Ese identificador no parece válido: «{ident}». Ejemplo: /nuevo deuitlandschekap41782cram")
                 return
@@ -324,7 +346,10 @@ def atender(estado, msg):
             for bandera, valor in zip(("--tema", "--obra", "--fecha"), partes[1:4]):
                 if valor:
                     extra += [bandera, valor]
-            enviar(f"▶ {ident}: {'empiezo' if orden == '/nuevo' else 'retomo'}. Te aviso cuando necesite algo.",
+            if linea_b:
+                extra += ["--linea", "B"]
+            enviar(f"▶ {ident}: {'empiezo' if orden == '/nuevo' else 'retomo'}"
+                   f"{' (línea B: restaurado + SVG)' if linea_b else ''}. Te aviso cuando necesite algo.",
                    responder_a=mid)
             lanzar(ident, *extra)
         else:

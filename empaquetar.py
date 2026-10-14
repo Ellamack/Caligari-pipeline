@@ -111,19 +111,49 @@ def estilo_del_libro(m):
     return meta.get("estilo"), ({"mocos": meta["mocos"]} if meta.get("mocos") else None)
 
 
-def imagenes_listing(finales, bundle, titulo, datos, n, lado):
+TEXTOS_B = {"flatlay_n": "{n} restored illustrations · SVG + PNG",
+            "flatlay_sin_n": "Restored illustrations · SVG + PNG",
+            "tamanos": "Print or cut at any size",
+            "tamanos_nota": "Vector SVG scales without losing quality · transparent PNG at 300 DPI"}
+
+
+def vistas_b(pngs, carpeta, lado=2000):
+    """Línea B: cada figura transparente sobre papel claro, en JPG. Son las "láminas" que usan la portada,
+    la Reference Sheet y los mocos (si se pusiera el PNG directo, la transparencia saldría negra)."""
+    from PIL import Image
+    carpeta.mkdir(parents=True, exist_ok=True)
+    papel = diseno.color("marco")
+    salida = []
+    for png in pngs:
+        fig = Image.open(png).convert("RGBA")
+        fig.thumbnail((int(lado * 0.86), int(lado * 0.86)), Image.LANCZOS)
+        w = max(fig.width, int(fig.height * 0.78)) + int(lado * 0.14)  # proporción de lámina vertical
+        h = max(fig.height, int(fig.width / 0.78)) + int(lado * 0.14)
+        hoja = Image.new("RGB", (w, h), papel)
+        hoja.paste(fig, ((w - fig.width) // 2, (h - fig.height) // 2), fig)
+        destino = carpeta / (png.stem + ".jpg")
+        hoja.save(destino, "JPEG", quality=90, dpi=(300, 300))
+        salida.append(destino)
+    return salida
+
+
+def imagenes_listing(finales, bundle, titulo, datos, n, lado, linea="A"):
     """Portada + mocos + pin. La obra (con su tomo) va en la portada y en el pin: es lo que distingue
     a los tomos de una misma obra, que si no se verían iguales. Devuelve (portada, [mocos])."""
     print("Portada del listing…")
+    if linea == "B":
+        diseno.actual()["textos"].update(TEXTOS_B)
+    formato = "SVG + PNG" if linea == "B" else "JPG 300 DPI"
     orden = hr.ranking_color(finales)  # una sola vez: portada y mocos se reparten láminas distintas
     svg = hr.llenar(PLANTILLAS / "reference_sheet.svg", sorted(orden[:6]),
                     {"TITULO": titulo, "SUBTITULO": datos["obra"],
-                     "CITA": f"{datos['autor']} · {datos['fecha']} · JPG 300 DPI · Instant download", "N": str(n)},
+                     "CITA": f"{datos['autor']} · {datos['fecha']} · {formato} · Instant download", "N": str(n)},
                     numeros=False)
     portada = hr.renderizar(svg, bundle / "portada.jpg")
     print("Mocos (detalle, flat lay, incluido, tamaños, pin)…")
     hechos = mocos.generar(finales, bundle / "mocos", titulo, n, lado, vistosas=orden[6:],
-                           subtitulo=datos["obra"], linea3=f"{datos['autor']} · {datos['fecha']} · instant download")
+                           subtitulo=datos["obra"], linea3=f"{datos['autor']} · {datos['fecha']} · instant download",
+                           linea=linea)
     return portada, hechos
 
 
@@ -139,6 +169,13 @@ def subir_kit(ident, bundle, prod, pdf=None):
         archivos.append(bundle / pin)
     if pdf:
         archivos.append(pdf)
+    for pieza in prod.get("sueltas") or []:  # cada pieza suelta: sus archivos y sus imágenes, en su subcarpeta
+        carpeta_p = bundle / pieza["carpeta"]
+        for a in [carpeta_p / x for x in pieza["archivos_etsy"]] + [bundle / x for x in pieza["imagenes"]]:
+            try:
+                drive.subir(a, f"{carpeta}/sueltas/{carpeta_p.name}", verificar=False)
+            except Exception as e:  # noqa: BLE001
+                print(f"(kit: no se subió {a.name}: {e})")
     subidos = 0
     for a in archivos:
         try:
@@ -152,6 +189,8 @@ def subir_kit(ident, bundle, prod, pdf=None):
 
 
 def armar_producto(m, datos):
+    if m.get("linea") == "B":
+        return armar_producto_b(m, datos)
     ident = m["id"]
     carpeta = mf.carpeta(ident)
     bundle = carpeta / "bundle"
@@ -209,12 +248,15 @@ def armar_producto(m, datos):
             if muestra.stat().st_size + f.stat().st_size > MUESTRA_MAX:
                 break
             z.write(f, f.name)
+    import sueltas
+    piezas = sueltas.armar_sueltas(m, datos, contenido, bundle)  # las elegidas con «sueltas 5, 18»
     return {"titulo": titulo, "n": n, "zip": zip_completo.name,
             "mb": round(zip_completo.stat().st_size / 1e6, 1), "md5": md5_de(zip_completo),
             "muestra": muestra.name, "portada": portada.name, "reference": ref.name,
             "mocos": [f"mocos/{h.name}" for h in hechos if not h.name.startswith("pin_")],
             "pin": next((f"mocos/{h.name}" for h in hechos if h.name.startswith("pin_")), None),
-            "pines": [f"mocos/{h.name}" for h in hechos if h.name.startswith("pin_")]}
+            "pines": [f"mocos/{h.name}" for h in hechos if h.name.startswith("pin_")],
+            "sueltas": piezas}
 
 
 # ---------------------------------------------------------------- paso 4: PDF + ficha
@@ -278,6 +320,85 @@ def hacer_pdf(destino, prod, enlace, datos, marca):
         qr_png.unlink(missing_ok=True)
 
 
+
+def armar_producto_b(m, datos):
+    """Línea B: figuras restauradas (restaurar.py) → ZIP con SVG + PNG transparente + README B + Reference Sheet."""
+    ident = m["id"]
+    carpeta = mf.carpeta(ident)
+    bundle = carpeta / "bundle"
+    contenido = bundle / "contenido"
+    if contenido.exists():
+        shutil.rmtree(contenido)
+    contenido.mkdir(parents=True)
+    r = m["etapas"]["restaurar"]
+    base = slug(datos["obra"])
+    tema = datos["tema"] or "Antique"
+    pngs, svgs, lista = [], [], []
+    for k, nombre in enumerate(r["quedan"], 1):
+        stem = f"{base}_{slug(tema)}_{k:03d}"
+        png = contenido / f"{stem}.png"
+        svg = contenido / f"{stem}.svg"
+        shutil.copy2(carpeta / "figuras" / nombre, png)
+        shutil.copy2(carpeta / "svg" / Path(nombre).with_suffix(".svg").name, svg)
+        pngs.append(png)
+        svgs.append(svg)
+        pagina = re.search(r"(\d+)(?:_\d+)?$", Path(nombre).stem)
+        lista.append(f" {k:>3}. {stem}.svg / .png" + (f"  (from page {int(pagina.group(1))} of the original)"
+                                                       if pagina else ""))
+    n = len(pngs)
+    titulo = f"{n} Antique {datos['tema']} SVG Illustrations" if datos["tema"] else f"{n} Antique SVG Illustrations"
+    sub = f"{datos['obra']} · {datos['autor']} · {datos['fecha']}"
+    cita = f"Originally published by {datos['autor']}, {datos['fecha']}. Source scan: Internet Archive."
+
+    print(diseno.usar(*estilo_del_libro(m)) and diseno.resumen())
+    vistas = vistas_b(pngs, bundle / "vistas")
+    print(f"Reference Sheet de {n} figuras…")
+    svg_ref = hr.llenar(PLANTILLAS / "reference_sheet.svg", vistas,
+                        {"TITULO": titulo, "SUBTITULO": sub, "CITA": cita, "N": str(n)}, numeros=True)
+    ref = hr.renderizar(svg_ref, contenido / f"{base}_reference_sheet.jpg")
+    shutil.copy2(ref, bundle / ref.name)
+    portada, hechos = imagenes_listing(vistas, bundle, titulo, datos, n, 0, linea="B")
+
+    marca = json.loads((PLANTILLAS / "marca.json").read_text(encoding="utf-8"))
+    readme = (PLANTILLAS / "readme_B.txt").read_text(encoding="utf-8")
+    campos = {"TITULO": titulo, "N": str(n), "OBRA": datos["obra"], "AUTOR": datos["autor"],
+              "FECHA": datos["fecha"], "LISTA": "\n".join(lista), "CITA": f"{cita}\n{m['meta'].get('url', '')}",
+              "EMAIL": marca["email"], "INSTAGRAM": marca["instagram"], "TIENDA": marca["tienda"]}
+    for c, v in campos.items():
+        readme = readme.replace("{" + c + "}", v)
+    leeme = contenido / "README.txt"
+    leeme.write_text(readme, encoding="utf-8")
+
+    print("ZIP completo…")
+    zip_completo = bundle / f"{base}_svg_png_complete.zip"
+    with zipfile.ZipFile(zip_completo, "w", zipfile.ZIP_DEFLATED) as z:  # el SVG es texto: comprime mucho
+        z.write(leeme, leeme.name)
+        z.write(ref, ref.name)
+        for f in svgs:
+            z.write(f, f"SVG/{f.name}")
+        for f in pngs:
+            z.write(f, f"PNG/{f.name}")
+    print("Muestra para Etsy…")
+    muestra = bundle / "sample_pack.zip"
+    with zipfile.ZipFile(muestra, "w", zipfile.ZIP_DEFLATED) as z:
+        z.write(leeme, leeme.name)
+        z.write(ref, ref.name)
+        for v in hr.mas_coloridas(vistas, 3):  # 3 figuras completas (SVG + PNG) para probar la calidad
+            stem = v.stem
+            for f in (contenido / f"{stem}.svg", contenido / f"{stem}.png"):
+                if muestra.stat().st_size + f.stat().st_size > MUESTRA_MAX:
+                    break
+                z.write(f, f.name)
+    import sueltas
+    piezas = sueltas.armar_sueltas(m, datos, contenido, bundle)  # las elegidas con «sueltas 5, 18»
+    return {"titulo": titulo, "n": n, "zip": zip_completo.name,
+            "mb": round(zip_completo.stat().st_size / 1e6, 1), "md5": md5_de(zip_completo),
+            "muestra": muestra.name, "portada": portada.name, "reference": ref.name,
+            "mocos": [f"mocos/{h.name}" for h in hechos if not h.name.startswith("pin_")],
+            "pin": next((f"mocos/{h.name}" for h in hechos if h.name.startswith("pin_")), None),
+            "pines": [f"mocos/{h.name}" for h in hechos if h.name.startswith("pin_")],
+            "sueltas": piezas}
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("id")
@@ -317,7 +438,7 @@ def main():
         mf.marcar(m, "empaquetar", "esperando", **prod)
         print(f"ZIP completo: {bundle / prod['zip']}  ({prod['mb']} MB, md5 {prod['md5']})")
     prod = {k: m["etapas"]["empaquetar"].get(k) for k in
-            ("titulo", "n", "zip", "mb", "md5", "muestra", "portada", "reference", "mocos", "pin", "pines")}
+            ("titulo", "n", "zip", "mb", "md5", "muestra", "portada", "reference", "mocos", "pin", "pines", "sueltas")}
 
     enlace = args.enlace or mf.respuesta(args.id, "enlace") or etapa.get("enlace")
     if not enlace and drive.disponible():  # camino automático: rclone sube el ZIP y saca el enlace
@@ -343,7 +464,7 @@ def main():
     pdf = bundle / PDF_ENTREGA
     hacer_pdf(pdf, prod, enlace, datos, marca)
     ficha = {
-        "titulo": f"{prod['titulo']} | {datos['obra']}, {datos['autor']} {datos['fecha']} | Printable JPG Bundle"[:140],
+        "titulo": f"{prod['titulo']} | {datos['obra']}, {datos['autor']} {datos['fecha']} | {'SVG PNG Bundle' if m.get('linea') == 'B' else 'Printable JPG Bundle'}"[:140],
         "descripcion": "",  # se redacta contigo (o con el modelo) en la etapa ficha
         "tags": [],
         "precio_usd": 0,
@@ -351,6 +472,7 @@ def main():
         "descarga_completa": {"zip": prod["zip"], "mb": prod["mb"], "enlace": enlace, "md5": prod["md5"]},
         "imagenes": [prod["portada"], prod["reference"]] + prod.get("mocos", []),
         "cita": f"{datos['autor']} ({datos['fecha']}). {meta.get('titulo', '')}. Internet Archive. {meta.get('url', '')}",
+        "sueltas": prod.get("sueltas") or [],
     }
     (bundle / "ficha.json").write_text(json.dumps(ficha, ensure_ascii=False, indent=2), encoding="utf-8")
     kit = subir_kit(args.id, bundle, prod, pdf)
@@ -359,9 +481,10 @@ def main():
     mf.marcar(m, "empaquetar", "hecho", enlace=enlace, pdf=pdf.name)
     mf.marcar(m, "ficha", "esperando")
     if not args.conservar:
-        for sub in ("crudo", "laminas"):
+        for sub in ("crudo", "laminas", "figuras", "svg"):  # todo está ya dentro del ZIP
             shutil.rmtree(mf.carpeta(args.id) / sub, ignore_errors=True)
         shutil.rmtree(bundle / "contenido", ignore_errors=True)
+        shutil.rmtree(bundle / "vistas", ignore_errors=True)
         print("Intermedios borrados (páginas crudas, láminas sueltas).")
     print(f"Listo. Para Etsy: {pdf.name} + {prod['muestra']}; imágenes: {prod['portada']}, {prod['reference']}")
     if prod.get("pin"):

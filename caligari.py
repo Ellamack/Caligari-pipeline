@@ -8,7 +8,7 @@ Mira el manifiesto (CONTRATO 2), corre la etapa que sigue y repite. Se detiene c
 Volver a correrlo es siempre seguro: retoma donde se quedó.
 
 Uso (normalmente lo lanza telegram_puente.py):
-  python3 caligari.py ID [--tema "Butterfly"] [--obra "De Uitlandsche Kapellen, Vol. III"] [--fecha "1779-1782"]
+  python3 caligari.py ID [--linea B] [--tema "Butterfly"] [--obra "De Uitlandsche Kapellen, Vol. III"] [--fecha "1779-1782"]
 
 Registro de cada libro: libros/<ID>/registro.log
 """
@@ -135,6 +135,9 @@ def siguiente(ident, m, linea):
             u = umbral_de_respuesta(ident)
             return ("procesar_laminas.py", ["--libro", ident, "--umbral", str(u)]) if u else None
         return "procesar_laminas.py", ["--libro", ident]
+    if m.get("linea") == "B" and not mf.hecho(m, "restaurar"):
+        # línea B: antes de empaquetar, quitar fondo → revisar figuras → (retoque) → vectorizar
+        return "restaurar.py", [ident]
     if not mf.hecho(m, "empaquetar"):
         if not datos_listing(ident, m):
             return None

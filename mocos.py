@@ -221,7 +221,7 @@ NOMBRE_ARCHIVO = {"pin": "pin_pinterest"}  # el pin no se sube a Etsy; rehacer_i
 
 
 def generar(laminas, salida, titulo, n, lado_px, vistosas=None, subtitulo="", linea3="Printable · instant download",
-            mocos=None):
+            mocos=None, linea="A"):
     """Genera las imágenes del listing. `laminas`: rutas JPG ya procesadas.
     `vistosas`: láminas ordenadas por color que aún no se usaron (la portada ya tomó las suyas);
     cada imagen toma láminas distintas para que el listing no repita la misma.
@@ -266,7 +266,11 @@ def generar(laminas, salida, titulo, n, lado_px, vistosas=None, subtitulo="", li
             flatlay(tomar(5), destino, titulo, n)
         elif tipo == "incluido":
             incluido(sorted(tomar(8)), destino, {"TITULO": titulo, "N": str(n),
-                                                 "RESOLUCION": f"300 DPI · up to {lado_px} px", "FORMATO": "JPG"})
+                                                 **({"UNIDAD": "restored illustrations", "FORMATO": "SVG + transparent PNG",
+                                                     "RESOLUCION": "SVG scales to any size · PNG 300 DPI"}
+                                                    if linea == "B" else
+                                                    {"UNIDAD": "complete plates", "FORMATO": "JPG",
+                                                     "RESOLUCION": f"300 DPI · up to {lado_px} px"})})
         elif tipo == "tamanos":
             # aquí solo importa el formato: si ya hubo un detalle, misma lámina (no gasta una vistosa)
             tamanos(primer_detalle or tomar(1)[0], destino)

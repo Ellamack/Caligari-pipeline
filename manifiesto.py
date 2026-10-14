@@ -12,7 +12,7 @@ from pathlib import Path
 BASE = Path(os.environ.get("CALIGARI_BASE", "/home/minion/caligari"))
 # Todo lo que Elandrés tiene que mirar con sus ojos llega aquí (y de aquí, a Drive con rclone).
 REVISION = BASE / "Elandres_revision"
-ETAPAS = ("descarga", "procesar", "revision", "empaquetar", "ficha")
+ETAPAS = ("descarga", "procesar", "revision", "restaurar", "empaquetar", "ficha")  # restaurar: solo línea B
 ESTADOS = ("pendiente", "en_curso", "hecho", "esperando", "error")
 
 
@@ -53,6 +53,7 @@ def guardar(m):
 def marcar(m, etapa, estado, **datos):
     assert etapa in ETAPAS, etapa
     assert estado in ESTADOS, estado
+    m["etapas"].setdefault(etapa, {"estado": "pendiente"})  # manifiestos de antes de que existiera la etapa
     m["etapas"][etapa].update(datos)
     m["etapas"][etapa]["estado"] = estado
     m["etapas"][etapa]["fecha"] = datetime.now().isoformat(timespec="seconds")
@@ -60,7 +61,7 @@ def marcar(m, etapa, estado, **datos):
 
 
 def hecho(m, etapa):
-    return m["etapas"][etapa]["estado"] == "hecho"
+    return m["etapas"].get(etapa, {}).get("estado") == "hecho"
 
 
 # ---------------------------------------------------------------- CONTRATO 3: preguntas y respuestas
