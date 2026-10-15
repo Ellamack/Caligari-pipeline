@@ -16,6 +16,10 @@ Uso (en el VPS; no necesita la autorización de la tienda, solo la llave de la a
 Resultado: seo/datos/mercado_<fecha>.csv y .md
 """
 import csv
+import html
+import json
+import re
+from collections import Counter
 import statistics as st
 import sys
 import time
@@ -37,23 +41,46 @@ def buscar(termino):
     return etsy._http("GET", url, {"x-api-key": etsy.cabecera_llave()})
 
 
+REGLAS = json.loads((Path(__file__).parent / "reglas.json").read_text(encoding="utf-8"))
+USD = {k: v for k, v in REGLAS.get("usd_por_moneda", {}).items() if not k.startswith("_")}
+# "220 PNG", "5 Fish Clipart", "40 SVG files": cuántas piezas declara el título (para el precio por pieza)
+PIEZAS = re.compile(r"\b(\d{1,4})\s*(?:x\s*)?(?:[a-z]+\s+){0,2}?(?:png|svg|jpe?g|clip ?arts?|images|illustrations|"
+                    r"graphics|designs|elements|pieces|files|stickers|ephemera|plates|prints)\b")
+TAGS_GUARDADOS = 25  # tags más usados por la competencia que se guardan por término
+
+
+def piezas(titulo):
+    nums = [int(n) for n in PIEZAS.findall(titulo.lower()) if 1 < int(n) <= 2000]
+    return max(nums) if nums else None
+
+
+def cuantil(v, q):
+    if not v:
+        return None
+    v = sorted(v)
+    return round(v[min(len(v) - 1, int(q * len(v)))], 2)
+
+
 def medir(termino):
     r = buscar(termino)
     ahora = time.time()
-    filas = []
+    filas, tags = [], Counter()
     for x in r.get("results", []):
         creado = x.get("original_creation_timestamp") or x.get("creation_timestamp") or ahora
         dias = max(1.0, (ahora - creado) / 86400)
         precio = x.get("price") or {}
-        filas.append({
-            "vistas_dia": (x.get("views") or 0) / dias,
-            "fav_dia": (x.get("num_favorers") or 0) / dias,
-            "digital": x.get("listing_type") == "download" or bool(x.get("is_digital")),
-            "precio": precio["amount"] / precio["divisor"] if precio.get("divisor") else None,
-            "moneda": precio.get("currency_code"),
-        })
+        monto = precio["amount"] / precio["divisor"] if precio.get("divisor") else None
+        usd = round(monto * USD[precio.get("currency_code")], 2) if monto and precio.get("currency_code") in USD else None
+        titulo = html.unescape(x.get("title") or "")
+        n = piezas(titulo)
+        digital = x.get("listing_type") == "download" or bool(x.get("is_digital"))
+        filas.append({"vistas_dia": (x.get("views") or 0) / dias, "fav_dia": (x.get("num_favorers") or 0) / dias,
+                      "digital": digital, "usd": usd, "n": n,
+                      "usd_pieza": round(usd / n, 3) if usd and n else None})
+        tags.update({html.unescape(t).lower().strip() for t in (x.get("tags") or [])})
     med = lambda v: round(st.median(v), 2) if v else None  # noqa: E731
     top = filas[:48]  # primera página
+    precios_dig = [f["usd"] for f in filas if f["digital"] and f["usd"]]
     return {
         "termino": termino,
         "competencia": r.get("count", 0),
@@ -61,8 +88,14 @@ def medir(termino):
         "vistas_dia_suma_p1": round(sum(f["vistas_dia"] for f in top), 1),
         "fav_dia_mediana_p1": med([f["fav_dia"] for f in top]),
         "pct_digital": round(100 * sum(f["digital"] for f in filas) / len(filas)) if filas else None,
-        "precio_mediano": med([f["precio"] for f in filas if f["precio"]]),
-        "moneda": next((f["moneda"] for f in filas if f["moneda"]), ""),
+        # Precios convertidos a USD (tipos de cambio aproximados de reglas.json), solo listings digitales.
+        "usd_p25": cuantil(precios_dig, 0.25),
+        "usd_mediana": med(precios_dig),
+        "usd_p75": cuantil(precios_dig, 0.75),
+        "usd_por_pieza_mediana": med([f["usd_pieza"] for f in filas if f["digital"] and f["usd_pieza"]]),
+        "n_con_piezas": sum(1 for f in filas if f["digital"] and f["usd_pieza"]),
+        # tags de la competencia: en cuántos de los 100 primeros listings aparece cada tag
+        "tags_competencia": "; ".join(f"{t} ({c})" for t, c in tags.most_common(TAGS_GUARDADOS)),
     }
 
 
@@ -122,10 +155,11 @@ def main():
         w.writeheader()
         w.writerows(resultados)
     lineas = [f"# Mercado Etsy — {date.today().isoformat()}", "",
-              "| término | competencia | vistas/día (mediana p1) | vistas/día (suma p1) | fav/día | % digital | precio | oportunidad |",
-              "|---|---|---|---|---|---|---|---|"]
+              "| término | competencia | vistas/día (mediana p1) | vistas/día (suma p1) | fav/día | % digital | USD p25–p50–p75 | USD/pieza | oportunidad |",
+              "|---|---|---|---|---|---|---|---|---|"]
     lineas += [f"| {r['termino']} | {r['competencia']:,} | {r['vistas_dia_mediana_p1']} | {r['vistas_dia_suma_p1']} | "
-               f"{r['fav_dia_mediana_p1']} | {r['pct_digital']}% | {r['precio_mediano']} {r['moneda']} | {r['oportunidad']} |"
+               f"{r['fav_dia_mediana_p1']} | {r['pct_digital']}% | {r['usd_p25']}–{r['usd_mediana']}–{r['usd_p75']} | "
+               f"{r['usd_por_pieza_mediana'] if r['usd_por_pieza_mediana'] is not None else '—'} (n={r['n_con_piezas']}) | {r['oportunidad']} |"
                for r in resultados]
     por_termino = {r["termino"]: r for r in resultados}
     if cuadricula:
@@ -137,7 +171,17 @@ def main():
         lineas += ["", f"## {g}", "", "| término | competencia | vistas/día p1 | % digital | oportunidad |", "|---|---|---|---|---|"]
         lineas += [f"| {t} | {por_termino[t]['competencia']:,} | {por_termino[t]['vistas_dia_suma_p1']} | "
                    f"{por_termino[t]['pct_digital']}% | {por_termino[t]['oportunidad']} |" for t in ts if t in por_termino]
+    total = Counter()
+    for r in resultados:
+        for par in filter(None, r["tags_competencia"].split("; ")):
+            t, _, c = par.rpartition(" (")
+            total[t] += int(c.rstrip(")"))
+    lineas += ["", "## Tags más usados por la competencia (suma en todos los términos)", "",
+               "Ideas de tags: los que se repiten aquí y no hemos medido se llevan a Etsy Insights (seo/insights_etsy.csv).", ""]
+    lineas += [f"- {t}: {c}" for t, c in total.most_common(60)]
     lineas += ["", "Oportunidad = vistas/día que reparte la primera página por cada 1,000 listings competidores.",
+               "USD = precio convertido con tipos de cambio aproximados (reglas.json), solo listings digitales.",
+               "USD/pieza = precio ÷ número de piezas que declara el título («220 PNG»); n = cuántos lo declaran.",
                "Vistas/día = vistas totales ÷ días desde que se creó el listing (promedio de toda su vida)."]
     base.with_suffix(".md").write_text("\n".join(lineas) + "\n", encoding="utf-8")
     print("\n".join(lineas))

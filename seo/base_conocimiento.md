@@ -1,4 +1,4 @@
-# Caligari — base de conocimiento SEO (v0.3 · 13 oct 2026)
+# Caligari — base de conocimiento SEO (v0.4 · 14 oct 2026)
 
 Este documento es la formación del agente **Caligari**, especialista en el SEO de The Caligari Cabinet en Etsy.
 Caligari lo lee completo antes de cada tarea. Si algo aquí cambia (Etsy cambia sus reglas, los datos de la tienda
@@ -140,9 +140,13 @@ En Shop Manager → Search visibility, Etsy revisa y recomienda:
 
 ### 2.9 Datos propios que Etsy da gratis  [Etsy]
 - **Search visibility** (Shop Manager): qué listings tienen problemas de calidad, y herramienta de sugerencia de títulos.
-- **Stats / Search analytics**: consultas con las que los compradores encontraron la tienda, con impresiones, clics y
-  ventas. Es la única fuente de **datos reales** de búsqueda. Pendiente: confirmar en Shop Manager qué métricas exactas
-  muestra hoy.
+- **Stats → How shoppers found you**: visitas por fuente. 14 oct 2026, desde que abrió la tienda: Etsy Search = **2%**
+  de las visitas (23); "Etsy marketing and SEO" (Google y anuncios externos de Etsy) = 66%. La tienda casi no aparece
+  en el buscador de Etsy: es el problema principal.
+- **Marketplace Insights → Explore search terms** (verificado 14 oct 2026): para un término, **búsquedas de los
+  últimos 30 días**, resultados, **conversión** (Very high … Very low) y ~9 términos relacionados. Es el dato de
+  demanda real (lo que eRank/Marmalead estiman). Gratis: ~10 consultas por semana; más páginas requieren Etsy Plus.
+  Los datos se guardan en `seo/insights_etsy.csv` y el validador los usa (ver 4.2).
 
 ### 2.10 Lo que dicen terceros (hipótesis, no reglas)  [Terceros]
 - Coincidencia **exacta** (palabras en el orden de la consulta) pesa un poco más que la amplia (eRank).
@@ -184,15 +188,23 @@ Ninguna herramienta tiene los conteos reales de Etsy: sus números son direccion
 5. Bilingüe: título, tags y descripción en inglés (mercado principal) y español.
 6. Título de menos de 15 palabras; 13 tags de máximo 20 caracteres; sin repetir lo que ya va en atributos.
 
-### 4.2 Dónde puede ganar esta tienda  [Fundamento aplicado]
-Productos de nicho, con historia verificable. Las consultas donde somos **de verdad** la respuesta más relevante:
-- **Obra / autor / año:** "cramer butterfly prints", "merrem bird illustration", "redoute roses print".
-  Poca competencia y relevancia total (nombres propios: ver 2.2).
-- **Especie o grupo:** "hawk moth print", "antique beetle art", "trogon illustration".
-- **Uso:** "junk journal printables", "printable wall art", "botanical clipart".
-- **Estética:** "dark academia decor", "cabinet of curiosities", "cottagecore wall art".
-- **Formato:** "png clipart transparent", "svg bundle" (solo línea B).
-Las consultas genéricas ("butterfly print", "vintage art") se pueden incluir como apoyo, no como apuesta principal.
+### 4.2 Dónde puede ganar esta tienda  [Datos de la tienda, 14 oct 2026]
+Medido con Etsy Insights (búsquedas/mes, conversión) y /mercado (competencia). Sustituye la versión v0.3, que era
+hipótesis: varias de sus apuestas (estética, nombres de grupo, autor) resultaron sin demanda o sin conversión.
+- **Intención de archivo convierte; decoración no.** "<sujeto> svg" y "<especie> svg" convierten alto o muy alto
+  ("moth svg" 166/mes, "mushroom svg" 405, "hummingbird svg" 330, "cardinal svg" 509, "butterfly svg" 1.5k).
+  "…decor", "…wall art", "…art" y estética ("witchy decor", "gothic decor", "entomology art") convierten muy bajo
+  aunque tengan mucho volumen: atraen curiosos, no compradores de archivos.
+- **Nombres comunes, no técnicos ni de grupo.** "hawk moth svg" = 0 búsquedas; "luna moth svg" = 54 con conversión
+  alta. Nombre científico solo en la descripción.
+- **"vintage <tema>" a secas casi no se busca** ("vintage moth" 40/mes, "vintage beetle" 21, conversión muy baja).
+- **Genéricos con intención de archivo** sirven de capa ancha: "vintage ephemera" (980, alta), "fussy cuts" (1.1k, alta;
+  también lo buscan costureras: acompañarlo de junk journal / ephemera).
+- **Junk journal es el volumen grande** ("junk journal kit" 8.8k, "supplies" 8k, "pages" 2.4k; conversión típica):
+  solo si el producto de verdad sirve para eso (hojas para imprimir y recortar).
+- **Autor y obra:** poca búsqueda; van en el título (después de la búsqueda principal) y en la descripción.
+- **Tres capas de tags por listing:** 2–3 anchos con volumen e intención de archivo · 4–6 del tema + formato ·
+  el resto específicos (especie + formato). Ningún tag medido con conversión baja/muy baja o 0 búsquedas.
 
 ### 4.3 Hallazgos de la auditoría inicial (11 oct 2026)  [Tienda]
 1. **Primera foto de los bundles: representar el conjunto, sin parecer collage con texto.** El producto de un bundle

@@ -15,6 +15,10 @@ from itertools import combinations
 from pathlib import Path
 
 REGLAS = json.loads((Path(__file__).parent / "reglas.json").read_text(encoding="utf-8"))
+# Caracteres que Etsy acepta (documentación de updateListing): tags = letras, números, espacios, - ' ™ © ®;
+# título = además puntuación y símbolos matemáticos, y %, :, & y + como máximo una vez cada uno.
+TAG_MALO = re.compile(r"[^\w\s\-'™©®]|_")
+TITULO_UNA_VEZ = "%:&+"
 
 
 def norm_tag(t):
@@ -61,6 +65,23 @@ def validar(p, catalogo=(), reglas=REGLAS):
         vistos.add(n)
     if repetidos:
         r.append(("tag_repetido", f"tags repetidos: {', '.join(repetidos)}"))
+    raros = [t for t in tags if TAG_MALO.search(t)]
+    if raros:
+        r.append(("tag_caracteres", f"tags con caracteres que Etsy no acepta: {', '.join(raros)}"))
+    dobles = [c for c in TITULO_UNA_VEZ if titulo.count(c) > 1]
+    if dobles:
+        r.append(("titulo_caracteres_repetidos", f"el título repite {' '.join(dobles)} (Etsy solo acepta uno de cada)"))
+    try:
+        from seo import demanda
+        datos = demanda.insights()
+        sin_demanda = [f"{t} ({demanda.veredicto(t, datos)})" for t in tags if demanda.veredicto(t, datos)]
+        fuera = [t for t in tags if demanda.temporada_vigente(t, titulo) is False]
+    except Exception:  # noqa: BLE001  sin datos de demanda, el validador sigue con lo demás
+        sin_demanda, fuera = [], []
+    if sin_demanda:
+        r.append(("tag_sin_demanda", "tags que los datos de Etsy desaconsejan: " + "; ".join(sin_demanda)))
+    if fuera:
+        r.append(("tag_fuera_de_temporada", f"tags de temporada vencidos o que no corresponden a este producto: {', '.join(fuera)}"))
     prohibidos = {norm_tag(k): v for k, v in reglas["tags_prohibidos"].items() if not k.startswith("_")}
     malos = [f"{t} ({prohibidos[norm_tag(t)]})" for t in tags if norm_tag(t) in prohibidos]
     if malos:

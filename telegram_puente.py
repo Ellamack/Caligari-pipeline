@@ -248,7 +248,9 @@ AYUDA = ("Dos tipos de mensaje:\n\n"
          "/estilos — estilos, fuentes y mocos disponibles\n"
          "/actualizar — trae del repo lo último (git pull) y reinicia el bot\n"
          "/seo — Caligari audita la tienda: problemas de títulos y tags, tags repetidos, vistas (solo lee)\n"
-         "/mercado [término] — competencia y tráfico en Etsy (todos los de seo/terminos.txt, o solo ese término)\n\n"
+         "/mercado [término] — competencia y tráfico en Etsy (todos los de seo/terminos.txt, o solo ese término)\n"
+         "/propuestas — Caligari propone título y tags para todos los listings (no cambia nada; manda archivo)\n"
+         "/aplicar todos | ID [excepto ID,ID] [si] — sin «si» muestra qué cambiaría; con «si» lo cambia en Etsy\n\n"
          "2) RESPUESTAS (sin /): cuando el bot pregunta algo, escribe solo la respuesta que te indica, "
          "p. ej. ok · quitar 67, 98 · umbral 25 · fecha 1779-1782 · retocar 12 · listo.\n"
          "Si hay varias preguntas abiertas a la vez: mantén presionado el mensaje de la pregunta → Responder.")
@@ -332,6 +334,27 @@ def atender(estado, msg):
             with open(mf.BASE / "seo_mercado.log", "a", encoding="utf-8") as fh:
                 subprocess.Popen([sys.executable, "-m", "seo.mercado", *extra, "--telegram"], cwd=AQUI,
                                  stdout=fh, stderr=subprocess.STDOUT, start_new_session=True)
+        elif orden == "/propuestas":
+            enviar("🖋 Caligari escribe propuestas para todos los listings (uno por uno, unos minutos). "
+                   "Te mando el archivo para revisar; nada cambia en Etsy.", responder_a=mid)
+            with open(mf.BASE / "seo_propuestas.log", "a", encoding="utf-8") as fh:
+                subprocess.Popen([sys.executable, "-m", "seo.generar", "--todos", "--telegram"], cwd=AQUI,
+                                 stdout=fh, stderr=subprocess.STDOUT, start_new_session=True)
+        elif orden == "/aplicar":
+            palabras = resto.replace(",", " , ").split()
+            args = ["--todos"] if palabras[:1] == ["todos"] else (["--listing", palabras[0]] if palabras else [])
+            if not args or not (args[0] == "--todos" or args[1].isdigit()):
+                enviar("Uso: /aplicar todos [excepto ID,ID] [si]  ·  /aplicar ID [si]", responder_a=mid)
+            else:
+                if "excepto" in palabras:
+                    ids = [w for w in palabras[palabras.index("excepto") + 1:] if w.isdigit()]
+                    args += ["--excepto", ",".join(ids)]
+                if "si" in palabras or "sí" in palabras:
+                    args.append("--si")
+                r = subprocess.run([sys.executable, "-m", "seo.aplicar", *args, "--telegram"], cwd=AQUI,
+                                   capture_output=True, text=True, timeout=600)
+                if r.returncode != 0:
+                    enviar((r.stderr or r.stdout or "error")[-1500:], responder_a=mid)
         elif orden == "/actualizar":
             actualizar(estado, mid)
         elif orden in ("/nuevo", "/seguir"):

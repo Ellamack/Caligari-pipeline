@@ -8,6 +8,13 @@ guardada en seo/datos/propuestas/<id>.json. No toca Etsy: aplicar es otro paso, 
 Uso:
   sudo python3 -m seo.generar --listing 4592286111     un listing que ya existe (de la última foto del catálogo)
   sudo python3 -m seo.generar --libro deuitlandschekap31782cram     un libro del pipeline (listing nuevo)
+  sudo python3 -m seo.generar --todos [--telegram]     todos los listings activos, uno tras otro: cada propuesta
+       se compara con las propuestas ya hechas (no solo con los tags viejos), para que no converjan en los mismos
+       tags. Al final escribe seo/datos/propuestas/revision_<fecha>.md con antes/después de todos.
+
+Tags con datos (14 oct 2026): el pedido incluye la tabla de seo/demanda.py (Etsy Insights) y el validador rechaza
+tags que esos datos desaconsejan (conversión baja o 0 búsquedas). Tres capas de tags por listing:
+anchos con volumen e intención de archivo · medios de su tema + formato · específicos (especie + formato).
 """
 import argparse
 import json
@@ -16,7 +23,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from seo import inventario  # noqa: E402
+from seo import demanda, inventario  # noqa: E402
 from seo.modelo import pedir_json  # noqa: E402
 from seo.validar import REGLAS, linea_de, solapamiento, validar  # noqa: E402
 
@@ -82,6 +89,12 @@ def pedido(producto, sibs):
         lineas.append("PRODUCT DATA: " + json.dumps(producto["datos"], ensure_ascii=False))
     lineas.append("\nSIBLING LISTINGS IN THE SHOP (share less than half of their tags with each of them):")
     lineas += [f"- {x['titulo']} | tags: {', '.join(x['tags'])}" for x in sibs]
+    lineas.append("\n" + demanda.tabla_prompt(producto))
+    lineas.append("\nTAG STRATEGY (three layers): 2-3 broad tags with volume and file intent (e.g. 'butterfly svg',"
+                  " 'vintage ephemera'); 4-6 mid tags = the product's subject + format ('moth svg', 'beetle png');"
+                  " the rest specific = species common name + format ('luna moth svg'). Use common names, never"
+                  " Latin names, in tags (Latin names may go in the description). Only words that truly describe"
+                  " the product. Put the main search phrase at the start of the title.")
     prohibidos = [k for k in REGLAS["tags_prohibidos"] if not k.startswith("_")]
     lineas.append(f"\nRULES: title max {REGLAS['titulo_max_palabras']} words; exactly {REGLAS['tags_exactos']} tags, "
                   f"each max {REGLAS['tag_max_caracteres']} characters, lowercase, no duplicates; "
@@ -134,15 +147,67 @@ def resumen(prop):
     return "\n".join(lineas)
 
 
+def revision_md(props):
+    """Un solo archivo para revisar todo de una vez (el que llega por Telegram)."""
+    from datetime import date
+    lineas = [f"# Propuestas de Caligari — {date.today().isoformat()}", "",
+              f"{len(props)} listings · costo total US$ {sum(p['_usd'] for p in props):.3f}", "",
+              "Para aplicar: todas → `python3 -m seo.aplicar --todos --si` · todas menos algunas → "
+              "`--todos --excepto ID1,ID2 --si` · una → `--listing ID --si`. Sin `--si` solo muestra qué cambiaría.", ""]
+    for p in props:
+        a = p["_antes"]
+        lineas += [f"## {p['_id']}" + ("  ⚠ NO PASA: " + "; ".join(p["_problemas"]) if p["_problemas"] else ""),
+                   f"- **Antes:** {a.get('titulo')}", f"- **Ahora:** {p.get('titulo_en')}",
+                   f"- **Búsqueda principal:** {p.get('busqueda_principal')}",
+                   f"- **Salen:** {', '.join(sorted(set(a.get('tags') or []) - set(p['tags_en']))) or '—'}",
+                   f"- **Entran:** {', '.join(t for t in p['tags_en'] if t not in (a.get('tags') or [])) or '—'}",
+                   f"- **Tags finales:** {', '.join(p['tags_en'])}",
+                   f"- **Por qué:** {p.get('justificacion', '')}", ""]
+    destino = inventario.DATOS / "propuestas" / f"revision_{date.today().isoformat()}.md"
+    destino.write_text("\n".join(lineas), encoding="utf-8")
+    return destino
+
+
+def todos(catalogo, telegram=False):
+    """Uno por uno; cada propuesta entra al catálogo de trabajo para que la siguiente no repita sus tags."""
+    trabajo = [dict(x) for x in catalogo]
+    props = []
+    for i, x in enumerate(catalogo, 1):
+        prop, _ = generar(x, trabajo)
+        props.append(prop)
+        for y in trabajo:
+            if y["id"] == x["id"]:
+                y["tags"], y["titulo"] = prop["tags_en"], prop.get("titulo_en", y["titulo"])
+        print(f"[{i}/{len(catalogo)}] {x['id']} {'OK' if not prop['_problemas'] else '⚠ ' + '; '.join(prop['_problemas'])}")
+    destino = revision_md(props)
+    malos = [p for p in props if p["_problemas"]]
+    texto = (f"🖋 Caligari propone título y tags para {len(props)} listings "
+             f"(US$ {sum(p['_usd'] for p in props):.3f}). {len(props) - len(malos)} pasan todas las reglas"
+             + (f"; {len(malos)} no: {', '.join(str(p['_id']) for p in malos)}" if malos else "") + ".\n"
+             "Revisa el archivo. Nada cambia en Etsy hasta que corras seo.aplicar con --si.")
+    print(texto, f"\n{destino}")
+    if telegram:
+        from telegram_puente import avisar, enviar_archivo
+        avisar(texto)
+        enviar_archivo(destino, "Antes / después de cada listing")
+    return props, destino
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--listing")
     g.add_argument("--libro")
+    g.add_argument("--todos", action="store_true")
     ap.add_argument("--telegram", action="store_true")
     a = ap.parse_args()
     foto = inventario.ultima_foto() or {"listings": []}
     catalogo = foto["listings"]
+    if a.todos:
+        if not catalogo:
+            sys.exit("No hay foto del catálogo: corre /seo primero.")
+        todos(catalogo, a.telegram)
+        return
     if a.listing:
         producto = next((x for x in catalogo if str(x["id"]) == a.listing), None)
         if producto is None:

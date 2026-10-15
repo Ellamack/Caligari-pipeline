@@ -144,3 +144,11 @@ Requiere en el venv: `pip install vtracer opencv-python-headless`.
   validada (hasta 3 intentos). Se guarda en `seo/datos/propuestas/`; no toca Etsy. Gasto en `seo/datos/gasto.jsonl`.
 - `/mercado [término]` o `sudo python3 -m seo.mercado`: por término (de `seo/terminos.txt`), competencia (listings activos)
   y señales de demanda de la primera página (vistas/día, favoritos/día, % digital, precio). API pública; sin modelo.
+- `seo/insights_etsy.csv`: búsquedas/mes, resultados y conversión de Etsy Marketplace Insights (a mano, ~10 por
+  semana). `seo/demanda.py` lo junta con /mercado: el generador recibe la tabla y el validador rechaza tags con
+  conversión baja o 0 búsquedas. Tags de temporada en `reglas.json` → `temporada` (con fecha de vencimiento).
+- `/propuestas` (o `python3 -m seo.generar --todos --telegram`): propuesta para todos los listings, uno tras otro, sin
+  repetir tags entre ellos. Llega `revision_<fecha>.md` con antes/después. No cambia nada en Etsy.
+- `/aplicar todos [excepto ID,ID] [si]` (o `python3 -m seo.aplicar …`): sin «si» muestra qué cambiaría; con «si»
+  cambia título y tags en Etsy. Salta listings editados a mano después de la propuesta. Respaldo en
+  `seo/datos/aplicados/`; `--deshacer ID --si` los devuelve a como estaban.

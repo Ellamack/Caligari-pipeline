@@ -13,6 +13,9 @@ Antes, una sola vez:
        sudo python3 pinterest_demo.py --llave
 Grabación (Win+Alt+R en tu PC, con el navegador y la terminal SSH a la vista):
   sudo python3 pinterest_demo.py IMAGEN.jpg "https://www.etsy.com/listing/4592286111"
+Desde el 14 oct 2026 (acceso Standard): por defecto usa producción (pines públicos). Opciones:
+  --solo-token   autoriza y guarda el token de producción en /etc/caligari/pinterest_token.json, sin publicar
+  --sandbox      todo en el Sandbox, como en la demostración
 """
 import base64
 import getpass
@@ -27,10 +30,13 @@ import urllib.request
 from pathlib import Path
 
 ENV = Path("/etc/caligari/pinterest.env")
-TOKEN = Path("/etc/caligari/pinterest_sandbox_token.json")
+# Acceso Standard aprobado el 14 oct 2026: por defecto, producción (pines públicos de verdad).
+# --sandbox vuelve al Sandbox (pines que solo ve el creador), útil para probar sin publicar.
+SANDBOX = "--sandbox" in sys.argv
+TOKEN = Path("/etc/caligari/pinterest_sandbox_token.json" if SANDBOX else "/etc/caligari/pinterest_token.json")
 REDIRECT = "http://localhost:8085/"
 AUTORIZAR = "https://www.pinterest.com/oauth/"
-API = "https://api-sandbox.pinterest.com/v5"  # Trial = Sandbox; con Standard se cambia a api.pinterest.com
+API = "https://api-sandbox.pinterest.com/v5" if SANDBOX else "https://api.pinterest.com/v5"
 PERMISOS = "user_accounts:read,boards:read,boards:write,pins:read,pins:write"
 
 
@@ -125,6 +131,9 @@ def main():
     if "--llave" in sys.argv:
         guardar_llave()
         return
+    if "--solo-token" in sys.argv:  # autoriza y guarda el token, sin publicar nada (para Pinner)
+        autorizar(config())
+        return
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     if len(args) != 2:
         sys.exit(__doc__)
@@ -153,8 +162,8 @@ def main():
     paso(5, "Publicación de un pin con imagen del pipeline, enlazado al listing de Etsy")
     pin = http("POST", API + "/pins", token, json_cuerpo={
         "board_id": tablero["id"], "link": enlace,
-        "title": "Antique Butterfly Plates — Printable Collection",
-        "description": "Antique natural history plates, scanned from the original book. Instant download.",
+        "title": "Antique Butterfly Plates — " + time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()),
+        "description": "Antique natural history plates, restored from the original book. Instant download.",
         "alt_text": "Fan of antique hand-coloured butterfly plates on a wooden table",
         "media_source": {"source_type": "image_base64", "content_type": "image/jpeg",
                          "data": base64.b64encode(imagen.read_bytes()).decode()}})
@@ -164,7 +173,7 @@ def main():
     paso(6, "Comprobación: leer el pin recién creado desde la API")
     leido = http("GET", API + f"/pins/{pin['id']}", token)
     print(f"✔ {leido.get('title')} · tablero {leido.get('board_id')} · enlace {leido.get('link')}")
-    print("\nFin de la demostración. Abre ahora tu perfil de Pinterest y muestra el pin en el tablero.")
+    print(f"\nFin de la demostración. Abre este enlace para ver el pin recién creado: https://www.pinterest.com/pin/{pin['id']}/")
 
 
 if __name__ == "__main__":

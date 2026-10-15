@@ -26,5 +26,50 @@
     "amazing",
     "gorgeous",
     "best"
-  ]
+  ],
+  "temporada": {
+    "_nota": "Tags de temporada: solo dentro de las fechas y solo si el título contiene alguna palabra de solo_si. El generador los ofrece; aplicar.py avisa cuando vencen.",
+    "halloween svg": {
+      "hasta": "2026-10-31",
+      "solo_si": [
+        "death",
+        "skull",
+        "gothic",
+        "spooky",
+        "halloween"
+      ]
+    }
+  },
+  "no_recomendar_si_contiene": {
+    "_nota": "Términos medidos que el generador no ofrece como recomendados (no se prohíben).",
+    "sticker": "casi todos los resultados son stickers físicos de vinil; solo si un día vendemos hojas de stickers imprimibles"
+  },
+  "min_busquedas_por_mil_resultados": 2,
+  "usd_por_moneda": {
+    "_nota": "Tipos de cambio APROXIMADOS (oct 2026) solo para comparar precios entre tiendas en /mercado; no para contabilidad. Actualizar si el peso o el dólar se mueven mucho.",
+    "USD": 1,
+    "EUR": 1.08,
+    "GBP": 1.27,
+    "CAD": 0.72,
+    "AUD": 0.65,
+    "NZD": 0.6,
+    "MXN": 0.053,
+    "INR": 0.012,
+    "PHP": 0.017,
+    "TRY": 0.029,
+    "NOK": 0.093,
+    "SEK": 0.095,
+    "DKK": 0.145,
+    "CHF": 1.12,
+    "JPY": 0.0066,
+    "PLN": 0.25,
+    "HKD": 0.128,
+    "SGD": 0.75,
+    "ILS": 0.27,
+    "BRL": 0.18,
+    "VND": 4e-05,
+    "ZAR": 0.055,
+    "MYR": 0.22,
+    "IDR": 6.3e-05
+  }
 }
