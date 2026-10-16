@@ -22,8 +22,9 @@ TITULO_UNA_VEZ = "%:&+"
 
 
 def norm_tag(t):
-    """Etsy guarda los tags en minúsculas; '_' y espacios cuentan igual para comparar."""
-    return re.sub(r"[\s_]+", " ", t.strip().lower())
+    """Etsy guarda los tags en minúsculas; '_' y espacios cuentan igual; Etsy junta singular y plural (2.10)."""
+    palabras = re.sub(r"[\s_]+", " ", t.strip().lower()).split(" ")
+    return " ".join(re.sub(r"(?<=[a-z]{3})(es|s)$", "", w) if len(w) > 4 else w for w in palabras)
 
 
 def linea_de(listing):
@@ -34,9 +35,14 @@ def linea_de(listing):
     return "B" if "svg" in texto else "A"
 
 
-def solapamiento(tags_a, tags_b):
-    """Fracción de tags compartidos respecto al listing con menos tags (0 a 1)."""
-    a, b = {norm_tag(t) for t in tags_a}, {norm_tag(t) for t in tags_b}
+def capa_ancha(reglas=REGLAS):
+    return {norm_tag(t) for t in reglas.get("capa_ancha", {}).get("lista", [])}
+
+
+def solapamiento(tags_a, tags_b, excluir=frozenset()):
+    """Fracción de tags compartidos respecto al listing con menos tags (0 a 1), sin contar los de `excluir`."""
+    a = {norm_tag(t) for t in tags_a} - set(excluir)
+    b = {norm_tag(t) for t in tags_b} - set(excluir)
     return len(a & b) / min(len(a), len(b)) if a and b else 0.0
 
 
@@ -52,6 +58,22 @@ def validar(p, catalogo=(), reglas=REGLAS):
     subj = [w for w in reglas["palabras_subjetivas_titulo"] if re.search(rf"\b{w}\b", titulo, re.I)]
     if subj:
         r.append(("titulo_subjetivo", f"palabras subjetivas en el título (van a la descripción): {', '.join(subj)}"))
+    if p.get("busqueda_principal"):
+        inicio = " ".join(titulo.lower().split()[:5])
+        faltan = [w for w in p["busqueda_principal"].lower().split() if w not in inicio]
+        if faltan:
+            r.append(("busqueda_no_al_inicio", f"la búsqueda principal «{p['busqueda_principal']}» no está al inicio del título (faltan: {', '.join(faltan)})"))
+    sin = [w for w in reglas.get("titulo_sin", {}).get("lista", []) if w in titulo.lower()]
+    if sin:
+        r.append(("titulo_oferta", f"precio/envío/oferta en el título (Etsy ya lo muestra): {', '.join(sin)}"))
+    libres = set(reglas.get("titulo_palabras_que_pueden_repetirse", []))
+    cuenta = {}
+    for w in re.findall(r"[a-z]+", titulo.lower()):
+        if len(w) > 2 and w not in libres:
+            cuenta[w] = cuenta.get(w, 0) + 1
+    dobles_t = sorted(w for w, n in cuenta.items() if n > 1)
+    if dobles_t:
+        r.append(("titulo_repite", f"el título repite palabras (Etsy pide no repetir): {', '.join(dobles_t)}"))
     if len(tags) != reglas["tags_exactos"]:
         r.append(("tags_numero", f"{len(tags)} tags (deben ser {reglas['tags_exactos']})"))
     largos = [t for t in tags if len(t) > reglas["tag_max_caracteres"]]
@@ -86,17 +108,45 @@ def validar(p, catalogo=(), reglas=REGLAS):
     malos = [f"{t} ({prohibidos[norm_tag(t)]})" for t in tags if norm_tag(t) in prohibidos]
     if malos:
         r.append(("tag_prohibido", "tags por revisar: " + "; ".join(malos)))
+    desc = p.get("descripcion", "").lower()
+    usos = [f"{k} ({v})" for k, v in reglas.get("palabras_prohibidas_descripcion", {}).items()
+            if not k.startswith("_") and k in desc]
+    if usos:
+        r.append(("descripcion_usos_falsos", "la descripción promete usos que el archivo no sirve: " + "; ".join(usos)))
+    if linea_de(p) == "B":
+        malos_b = sorted({w for w in reglas.get("prohibido_tags_y_titulo_linea_B", {}).get("lista", [])
+                          for t in tags + [titulo] if w in t.lower()})
+        if malos_b:
+            r.append(("linea_B_escaneo", f"línea B (restaurada y vectorizada) descrita como escaneo: {', '.join(malos_b)}"))
     if linea_de(p) == "A":
+        malos_a = sorted({w for w in reglas.get("prohibido_tags_y_titulo_linea_A", {}).get("lista", [])
+                          for t in tags + [titulo] if re.search(rf"\b{w}", t.lower())})
+        if malos_a:
+            r.append(("linea_A_formato", f"línea A (JPG escaneado) con palabras de otro formato: {', '.join(malos_a)}"))
+        debe = reglas.get("descripcion_linea_A_debe_decir", {}).get("alguna_de", [])
+        if desc and debe and not any(w in desc for w in debe):
+            r.append(("linea_A_entrega", "la descripción de línea A no dice que se recibe un PDF con enlace de descarga"))
         texto = f"{titulo} {' '.join(tags)} {p.get('descripcion', '')}".lower()
         for w in reglas["palabras_prohibidas_linea_A"]:
             if w in texto:
                 r.append(("linea_A_restaurado", f"línea A con «{w}…»: las láminas A no se restauran"))
-    for otro in catalogo:
-        if otro.get("id") is not None and otro.get("id") == p.get("id"):
-            continue
-        s = solapamiento(tags, otro.get("tags", []))
-        if s >= reglas["max_solapamiento_hermanos"]:
-            r.append(("canibaliza", f"comparte {s:.0%} de tags con «{otro.get('titulo', '')[:60]}» ({otro.get('id')})"))
+    otros = [o for o in catalogo if not (o.get("id") is not None and o.get("id") == p.get("id"))]
+    if otros:
+        ajenos = {norm_tag(t) for o in otros for t in o.get("tags", [])}
+        propios = [t for t in tags if norm_tag(t) not in ajenos]
+        regla = reglas.get("tags_propios", {})
+        con_especies = bool((p.get("ficha") or {}).get("especies"))
+        minimo = regla.get("con_especies", 3) if con_especies else regla.get("sin_especies", 1)
+        if len(propios) < minimo:
+            r.append(("canibaliza", f"solo {len(propios)} tag(s) que ningún otro listing usa (mínimo {minimo}"
+                                    + ("" if con_especies else ", la ficha no trae especies") + ")"))
+    ficha = p.get("ficha")
+    if ficha:
+        permitidos = {str(ficha.get("figuras"))} | set(re.findall(r"\d+", str(ficha.get("anio", ""))))
+        permitidos |= set(re.findall(r"\d+", str(ficha.get("obra", "")) + " " + str(ficha.get("nombre", ""))))
+        raros_n = [n for n in re.findall(r"\b\d+\b", titulo) if n not in permitidos]
+        if raros_n:
+            r.append(("ficha_numero", f"el título dice {', '.join(raros_n)} y la ficha no (figuras: {ficha.get('figuras')}, año: {ficha.get('anio')})"))
     return r
 
 
@@ -105,7 +155,7 @@ def auditar(catalogo, reglas=REGLAS):
     por_listing = {x["id"]: validar(x, (), reglas) for x in catalogo}
     parejas = []
     for a, b in combinations(catalogo, 2):
-        s = solapamiento(a.get("tags", []), b.get("tags", []))
+        s = solapamiento(a.get("tags", []), b.get("tags", []), capa_ancha(reglas))
         if s >= reglas["max_solapamiento_hermanos"]:
             parejas.append((s, a, b))
     parejas.sort(key=lambda x: -x[0])

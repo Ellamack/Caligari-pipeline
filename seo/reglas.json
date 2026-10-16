@@ -6,6 +6,7 @@
   "tag_max_caracteres": 20,
   "max_solapamiento_hermanos": 0.5,
   "palabras_prohibidas_linea_A": [
+    "restaur",
     "restor"
   ],
   "tags_prohibidos": {
@@ -17,7 +18,12 @@
     "laser_cut_file": "no son archivos de corte: SVG a color apilado (~34 colores, cientos de trazos); una cortadora lo vería como cientos de capas",
     "laser cut": "no son archivos de corte: SVG a color apilado (~34 colores, cientos de trazos); una cortadora lo vería como cientos de capas",
     "cut file": "no son archivos de corte: SVG a color apilado (~34 colores, cientos de trazos); una cortadora lo vería como cientos de capas",
-    "svg cut file": "no son archivos de corte: SVG a color apilado (~34 colores, cientos de trazos); una cortadora lo vería como cientos de capas"
+    "svg cut file": "no son archivos de corte: SVG a color apilado (~34 colores, cientos de trazos); una cortadora lo vería como cientos de capas",
+    "archivo de corte": "no son archivos de corte: SVG a color apilado (~34 colores, cientos de trazos); una cortadora lo vería como cientos de capas",
+    "archivos de corte": "no son archivos de corte: SVG a color apilado (~34 colores, cientos de trazos); una cortadora lo vería como cientos de capas",
+    "corte laser": "no son archivos de corte: SVG a color apilado (~34 colores, cientos de trazos); una cortadora lo vería como cientos de capas",
+    "corte láser": "no son archivos de corte: SVG a color apilado (~34 colores, cientos de trazos); una cortadora lo vería como cientos de capas",
+    "svg para cricut": "no son archivos de corte: SVG a color apilado (~34 colores, cientos de trazos); una cortadora lo vería como cientos de capas"
   },
   "palabras_subjetivas_titulo": [
     "beautiful",
@@ -71,5 +77,82 @@
     "ZAR": 0.055,
     "MYR": 0.22,
     "IDR": 6.3e-05
+  },
+  "palabras_prohibidas_descripcion": {
+    "_nota": "Usos que estos archivos no sirven (SVG a color apilado, ~34 pasos). 15 oct 2026.",
+    "laser cut": "no sirve para corte láser",
+    "cutting machine": "no sirve para cortadora",
+    "cricut": "no sirve para cortadora",
+    "embroidery": "no sirve para digitalizar bordado",
+    "cut file": "no es archivo de corte"
+  },
+  "capa_ancha": {
+    "_nota": "Tags anchos que los listings comparten A PROPÓSITO (estrategia de tres capas). No cuentan para la canibalización: se mide solo lo específico. 15 oct 2026.",
+    "lista": [
+      "vintage ephemera",
+      "fussy cuts",
+      "junk journal kit",
+      "junk journal pages",
+      "digital scrapbooking",
+      "naturalist gift",
+      "insect clipart",
+      "insect png",
+      "insect svg",
+      "bird clipart",
+      "vintage bird svg",
+      "antique bird print",
+      "botanical svg",
+      "printable ephemera",
+      "natural history"
+    ]
+  },
+  "prohibido_tags_y_titulo_linea_A": {
+    "_nota": "Las láminas A son JPG escaneados: no son SVG, ni PNG transparente, ni recortes. 15 oct 2026.",
+    "lista": [
+      "svg",
+      "clipart",
+      "png",
+      "transparent",
+      "fussy cut"
+    ]
+  },
+  "tags_propios": {
+    "_nota": "Sustituye a la regla del 50% (15 oct 2026). Etsy muestra pocos listings de una misma tienda por búsqueda: compartir 'moth svg' con un hermano no daña, pero cada listing debe cubrir al menos algunas búsquedas que ningún otro cubre. Si la ficha no trae especies, se exige menos para no empujar al modelo a inventar.",
+    "con_especies": 3,
+    "sin_especies": 1
+  },
+  "titulo_sin": {
+    "_nota": "Etsy 2.4: sin precio, envío ni ofertas en el título.",
+    "lista": [
+      "free shipping",
+      "sale",
+      "% off",
+      "discount",
+      "$",
+      "coupon"
+    ]
+  },
+  "titulo_palabras_que_pueden_repetirse": [
+    "svg",
+    "png",
+    "vol",
+    "and",
+    "the",
+    "of",
+    "with"
+  ],
+  "descripcion_linea_A_debe_decir": {
+    "_nota": "CONTRATOS 4: el comprador debe saber que recibe un PDF con enlace de descarga.",
+    "alguna_de": [
+      "download link",
+      "pdf"
+    ]
+  },
+  "prohibido_tags_y_titulo_linea_B": {
+    "_nota": "La línea B es restaurada y vectorizada: decir 'scanned/escaneada' la describe como lo que no es (15 oct 2026, traducción de Hummingbird).",
+    "lista": [
+      "scanned",
+      "escanead"
+    ]
   }
 }
