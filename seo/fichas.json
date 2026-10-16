@@ -1,0 +1,651 @@
+[
+ {
+  "id": 4592286111,
+  "nombre": "Cramer Vol. I",
+  "linea": "A",
+  "formato": "JPG 300 DPI",
+  "figuras": 97,
+  "autor": "Pieter Cramer",
+  "obra": "De Uitlandsche Kapellen (Papillons exotiques), Vol. I",
+  "anio": "1775–1779",
+  "sujetos": [
+   "butterfly",
+   "moth"
+  ],
+  "especies": [],
+  "notas": "97 láminas incluido el frontispicio grabado. PDF con enlace al ZIP (~92 MB), sample pack, hoja de referencia. Láminas tal cual del escaneo: NO restauradas.",
+  "dudas": []
+ },
+ {
+  "id": 4592817196,
+  "nombre": "Cramer Vol. II",
+  "linea": "A",
+  "formato": "JPG 300 DPI",
+  "figuras": 96,
+  "autor": "Pieter Cramer",
+  "obra": "De Uitlandsche Kapellen (Papillons exotiques), Vol. II",
+  "anio": "1775–1779",
+  "sujetos": [
+   "butterfly",
+   "moth"
+  ],
+  "especies": [],
+  "notas": "Láminas tal cual del escaneo: NO restauradas.",
+  "dudas": [
+   "Fecha: el título dice 1775–1779; ¿es correcta para el Vol. II?"
+  ]
+ },
+ {
+  "id": 4593930684,
+  "nombre": "Cramer Vol. III",
+  "linea": "A",
+  "formato": "JPG 300 DPI",
+  "figuras": 96,
+  "autor": "Pieter Cramer",
+  "obra": "De Uitlandsche Kapellen (Papillons exotiques), Vol. III",
+  "anio": "1782",
+  "sujetos": [
+   "butterfly",
+   "moth"
+  ],
+  "especies": [],
+  "notas": "Láminas tal cual del escaneo: NO restauradas.",
+  "dudas": [
+   "Fecha: el título dice 1782; ¿correcta?"
+  ]
+ },
+ {
+  "id": 4593947312,
+  "nombre": "Cramer Vol. IV",
+  "linea": "A",
+  "formato": "JPG 300 DPI",
+  "figuras": 109,
+  "autor": "Pieter Cramer",
+  "obra": "De Uitlandsche Kapellen (Papillons exotiques), Vol. IV",
+  "anio": "1782",
+  "sujetos": [
+   "butterfly",
+   "moth"
+  ],
+  "especies": [],
+  "notas": "Línea A: nunca svg, clipart, png transparente ni fussy cuts. Láminas tal cual del escaneo: NO restauradas.",
+  "dudas": []
+ },
+ {
+  "id": 4513881102,
+  "nombre": "Mushroom Vol. 2",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 5,
+  "autor": "James Sowerby",
+  "obra": "Coloured Figures of English Fungi or Mushrooms",
+  "anio": "1797",
+  "sujetos": [
+   "mushroom",
+   "fungi",
+   "toadstool"
+  ],
+  "especies": [],
+  "notas": "",
+  "dudas": [
+   "¿Sabes qué especies son? Si no, se queda solo como «mushroom/fungi»."
+  ]
+ },
+ {
+  "id": 4422831417,
+  "nombre": "Mushroom Vol. 1",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 10,
+  "autor": "James Sowerby",
+  "obra": "Coloured Figures of English Fungi or Mushrooms",
+  "anio": "1797",
+  "sujetos": [
+   "mushroom",
+   "fungi",
+   "toadstool"
+  ],
+  "especies": [],
+  "notas": "",
+  "dudas": []
+ },
+ {
+  "id": 4508272202,
+  "nombre": "Fruit Vol. 2",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 5,
+  "autor": "Isaac P. Trimble",
+  "obra": "A Treatise on the Insect Enemies of Fruit and Fruit Trees",
+  "anio": "1865",
+  "sujetos": [
+   "fruit"
+  ],
+  "especies": [],
+  "notas": "Frutas con parásitos, retocadas para que no se vean enfermas.",
+  "dudas": [
+   "Frutas no identificadas: queda genérico («fruit»)."
+  ]
+ },
+ {
+  "id": 4422846020,
+  "nombre": "Fruit Vol. 1",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 11,
+  "autor": "varias fuentes",
+  "obra": "varias fuentes",
+  "anio": "",
+  "sujetos": [
+   "fruit",
+   "vegetable"
+  ],
+  "especies": [
+   "ciruela/chabacano (plum/apricot)",
+   "durazno (peach)",
+   "pasas (raisins)",
+   "chícharos? (peas, probable)",
+   "nuez (walnut/nut)",
+   "papa (potato)",
+   "manzana (apple)",
+   "frijoles rojos (red beans)",
+   "higo? (fig, probable)"
+  ],
+  "notas": "Dicho por Elandrés 15 oct. Los marcados con ? son probables: no usarlos en título ni tags. Hay papa, frijoles y chícharos: no todo es fruta.",
+  "dudas": []
+ },
+ {
+  "id": 4567762971,
+  "nombre": "Caterpillar Vol. 1",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 5,
+  "autor": "Blanchard y Le Paige",
+  "obra": "dibujos para la Collection iconographique et historique des Chenilles d'Europe (Boisduval)",
+  "anio": "c. 1832–1843",
+  "sujetos": [
+   "caterpillar",
+   "larva"
+  ],
+  "especies": [],
+  "notas": "",
+  "dudas": []
+ },
+ {
+  "id": 4422855742,
+  "nombre": "Caterpillar Vol. 2",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 5,
+  "autor": "Blanchard y Le Paige",
+  "obra": "dibujos para la Collection iconographique et historique des Chenilles d'Europe (Boisduval)",
+  "anio": "c. 1832–1843",
+  "sujetos": [
+   "caterpillar",
+   "larva"
+  ],
+  "especies": [],
+  "notas": "",
+  "dudas": []
+ },
+ {
+  "id": 4567110097,
+  "nombre": "Rose",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 5,
+  "autor": "P.J. Redouté",
+  "obra": "Les Roses",
+  "anio": "1821",
+  "sujetos": [
+   "rose"
+  ],
+  "especies": [],
+  "notas": "",
+  "dudas": []
+ },
+ {
+  "id": 4565227918,
+  "nombre": "Temple of Flora",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 15,
+  "autor": "Robert John Thornton",
+  "obra": "Temple of Flora",
+  "anio": "1807",
+  "sujetos": [
+   "flower",
+   "floral"
+  ],
+  "especies": [],
+  "notas": "Flores y elementos florales (no 15 flores completas).",
+  "dudas": [
+   "La descripción dice «High-End Entomology Vector Pack»: error, debería decir Botanical. ¿Lo corregimos?"
+  ]
+ },
+ {
+  "id": 4565197092,
+  "nombre": "Beetle Vol. 2",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 5,
+  "autor": "Dru Drury",
+  "obra": "Illustrations of Natural History, Vol. II",
+  "anio": "1773",
+  "sujetos": [
+   "beetle"
+  ],
+  "especies": [],
+  "notas": "",
+  "dudas": []
+ },
+ {
+  "id": 4422863895,
+  "nombre": "Beetle Vol. 1",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 5,
+  "autor": "varias fuentes",
+  "obra": "varias fuentes",
+  "anio": "",
+  "sujetos": [
+   "beetle"
+  ],
+  "especies": [],
+  "notas": "",
+  "dudas": []
+ },
+ {
+  "id": 4478025438,
+  "nombre": "Longhorn Beetle",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 5,
+  "autor": "Dru Drury",
+  "obra": "Illustrations of Natural History, Vol. II, lámina XXXI",
+  "anio": "1773",
+  "sujetos": [
+   "beetle",
+   "longhorn beetle"
+  ],
+  "especies": [
+   "Mirabilis",
+   "Bipunctatus",
+   "Spinosus",
+   "Farinosus",
+   "Alpinus"
+  ],
+  "notas": "SVG a color apilado (~34 pasos): no sirve para corte ni bordado. Verificar en la descripción actual que no diga «laser cutting» ni «embroidery».",
+  "dudas": []
+ },
+ {
+  "id": 4464363641,
+  "nombre": "Wasp, Mantis & Bee",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 5,
+  "autor": "Dru Drury",
+  "obra": "Illustrations of Natural History, Vol. II",
+  "anio": "1773",
+  "sujetos": [
+   "insect",
+   "wasp",
+   "mantis",
+   "bee"
+  ],
+  "especies": [],
+  "notas": "",
+  "dudas": [
+   "Son 5 insectos: ¿cuántas avispas, mantis y abejas? ¿Hay algún otro?"
+  ]
+ },
+ {
+  "id": 4422858069,
+  "nombre": "Butterfly Vol. 1",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 5,
+  "autor": "Dru Drury",
+  "obra": "Illustrations of Natural History, Vol. II",
+  "anio": "1773",
+  "sujetos": [
+   "butterfly"
+  ],
+  "especies": [],
+  "notas": "",
+  "dudas": []
+ },
+ {
+  "id": 4569677061,
+  "nombre": "Butterfly Vol. 2",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 11,
+  "autor": "Jacob Hübner",
+  "obra": "Sammlung europäischer Schmetterlinge",
+  "anio": "1805",
+  "sujetos": [
+   "butterfly",
+   "fritillary"
+  ],
+  "especies": [
+   "False Heath Fritillary (Melitaea diamina)",
+   "Twin-spot Fritillary (Brenthis hecate)",
+   "Marbled Fritillary (Brenthis daphne)",
+   "Titania's Fritillary (Boloria titania)",
+   "Frigga Fritillary (Boloria frigga)"
+  ],
+  "notas": "11 figuras de 5 especies (anverso y reverso).",
+  "dudas": []
+ },
+ {
+  "id": 4568522812,
+  "nombre": "Fish Vol. 1",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 5,
+  "autor": "R.H. Schomburgk; ed. Sir William Jardine",
+  "obra": "The Naturalist's Library, Vol. XL — Fishes of British Guiana",
+  "anio": "1843",
+  "sujetos": [
+   "fish"
+  ],
+  "especies": [
+   "Cychla nigro maculata",
+   "Centrarchus rostratus",
+   "Pomotis fasciatus",
+   "Cychla monoculus",
+   "Cychla orinocensis"
+  ],
+  "notas": "",
+  "dudas": [
+   "Cychla = pavón / peacock bass. ¿Permitimos «peacock bass» como tag?"
+  ]
+ },
+ {
+  "id": 4567786258,
+  "nombre": "Fish Vol. 2",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 5,
+  "autor": "R.H. Schomburgk; ed. Sir William Jardine",
+  "obra": "The Naturalist's Library, Vol. XL — Fishes of British Guiana",
+  "anio": "1843",
+  "sujetos": [
+   "fish"
+  ],
+  "especies": [
+   "Cychla rutilans",
+   "Dark Marked Centrarchus",
+   "Cychla flavo maculata",
+   "Cychla argus",
+   "Corvina grunniens"
+  ],
+  "notas": "",
+  "dudas": []
+ },
+ {
+  "id": 4574181456,
+  "nombre": "Hummingbird",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 1,
+  "autor": "Blasius Merrem",
+  "obra": "Avium Rariorum et Minus Cognitarum Icones et Descriptiones, Tafel IV",
+  "anio": "1786",
+  "sujetos": [
+   "hummingbird",
+   "bird"
+  ],
+  "especies": [
+   "Scarlet Hummingbird (Mellisuga coccinea)"
+  ],
+  "notas": "",
+  "dudas": []
+ },
+ {
+  "id": 4574155032,
+  "nombre": "Green Honeycreeper",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 1,
+  "autor": "Blasius Merrem",
+  "obra": "Avium Rariorum et Minus Cognitarum Icones et Descriptiones, Tafel V",
+  "anio": "1786",
+  "sujetos": [
+   "bird",
+   "tropical bird"
+  ],
+  "especies": [
+   "Green Honeycreeper (Merops spiza)"
+  ],
+  "notas": "",
+  "dudas": [
+   "La descripción dice «Green Bee-eater» y el título «Green Honeycreeper». El nombre moderno de Merops spiza es Green Honeycreeper; ¿corregimos la descripción?"
+  ]
+ },
+ {
+  "id": 4574013253,
+  "nombre": "Fox Sparrow",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 1,
+  "autor": "Blasius Merrem",
+  "obra": "Avium Rariorum et Minus Cognitarum Icones et Descriptiones, Tafel X",
+  "anio": "1786",
+  "sujetos": [
+   "sparrow",
+   "bird"
+  ],
+  "especies": [
+   "Fox Sparrow (Fringilla iliaca)"
+  ],
+  "notas": "",
+  "dudas": []
+ },
+ {
+  "id": 4573041894,
+  "nombre": "Flycatcher",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 1,
+  "autor": "Blasius Merrem",
+  "obra": "Avium Rariorum et Minus Cognitarum Icones et Descriptiones",
+  "anio": "1786",
+  "sujetos": [
+   "flycatcher",
+   "bird"
+  ],
+  "especies": [
+   "Muscicapa ferruginea"
+  ],
+  "notas": "Posado junto a su nido con dos huevos.",
+  "dudas": []
+ },
+ {
+  "id": 4572865407,
+  "nombre": "Blue-crowned Trogon",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 1,
+  "autor": "Blasius Merrem",
+  "obra": "Avium Rariorum et Minus Cognitarum Icones et Descriptiones, Tafel IX",
+  "anio": "1786",
+  "sujetos": [
+   "trogon",
+   "tropical bird"
+  ],
+  "especies": [
+   "Blue-crowned Trogon (Trogon curucui)"
+  ],
+  "notas": "",
+  "dudas": []
+ },
+ {
+  "id": 4572348287,
+  "nombre": "Exotic Bird (Gracula)",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 1,
+  "autor": "Blasius Merrem",
+  "obra": "Avium Rariorum et Minus Cognitarum Icones et Descriptiones, Tafel III",
+  "anio": "1786",
+  "sujetos": [
+   "bird"
+  ],
+  "especies": [
+   "Gracula chrysoptera"
+  ],
+  "notas": "",
+  "dudas": []
+ },
+ {
+  "id": 4572182427,
+  "nombre": "Red Cotinga",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 1,
+  "autor": "Blasius Merrem",
+  "obra": "Avium Rariorum et Minus Cognitarum Icones et Descriptiones, Tafel I",
+  "anio": "1786",
+  "sujetos": [
+   "cotinga",
+   "tropical bird"
+  ],
+  "especies": [
+   "Cotinga rubra"
+  ],
+  "notas": "",
+  "dudas": []
+ },
+ {
+  "id": 4571701144,
+  "nombre": "Oleander Hawk Moth",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 1,
+  "autor": "John Curtis",
+  "obra": "British Entomology, Vol. V — Lepidoptera Part 1",
+  "anio": "1823",
+  "sujetos": [
+   "moth",
+   "hawk moth"
+  ],
+  "especies": [
+   "Oleander Hawk Moth (Daphnis nerii)"
+  ],
+  "notas": "",
+  "dudas": []
+ },
+ {
+  "id": 4571448480,
+  "nombre": "Wood Leopard Moth",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 1,
+  "autor": "John Curtis",
+  "obra": "British Entomology, Vol. V — Lepidoptera Part 1, lámina 722",
+  "anio": "1823",
+  "sujetos": [
+   "moth"
+  ],
+  "especies": [
+   "Wood Leopard Moth (Zeuzera aesculi)"
+  ],
+  "notas": "",
+  "dudas": []
+ },
+ {
+  "id": 4571023565,
+  "nombre": "Red Underwing Moth",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 1,
+  "autor": "John Curtis",
+  "obra": "British Entomology, Vol. V — Lepidoptera Part 1, lámina 217",
+  "anio": "1823",
+  "sujetos": [
+   "moth"
+  ],
+  "especies": [
+   "Large Red Underwing (Catocala elocata)"
+  ],
+  "notas": "",
+  "dudas": []
+ },
+ {
+  "id": 4570280561,
+  "nombre": "Eyed Hawk Moth",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 1,
+  "autor": "John Curtis",
+  "obra": "British Entomology, Vol. V — Lepidoptera Part 1, lámina 482",
+  "anio": "1823",
+  "sujetos": [
+   "moth",
+   "hawk moth"
+  ],
+  "especies": [
+   "Eyed Hawkmoth (Smerinthus ocellatus)"
+  ],
+  "notas": "",
+  "dudas": []
+ },
+ {
+  "id": 4570247235,
+  "nombre": "Tobacco Hawk Moth",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 1,
+  "autor": "John Curtis",
+  "obra": "British Entomology, Vol. V — Lepidoptera Part 1, lámina 195",
+  "anio": "1823",
+  "sujetos": [
+   "moth",
+   "hawk moth"
+  ],
+  "especies": [
+   "Tobacco Hawkmoth (Sphinx carolina)"
+  ],
+  "notas": "",
+  "dudas": []
+ },
+ {
+  "id": 4569834782,
+  "nombre": "Goat Moth",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 1,
+  "autor": "John Curtis",
+  "obra": "British Entomology, Vol. V — Lepidoptera Part 1, lámina 60",
+  "anio": "1823",
+  "sujetos": [
+   "moth"
+  ],
+  "especies": [
+   "Goat Moth (Cossus ligniperda)"
+  ],
+  "notas": "",
+  "dudas": []
+ },
+ {
+  "id": 4569763600,
+  "nombre": "Death's Head Hawkmoth",
+  "linea": "B",
+  "formato": "SVG + PNG transparente",
+  "figuras": 1,
+  "autor": "Sir William Jardine (ed.)",
+  "obra": "The Naturalist's Library, Vol. VI — Bees, lámina 9",
+  "anio": "1840",
+  "sujetos": [
+   "moth",
+   "hawk moth"
+  ],
+  "especies": [
+   "Death's Head Hawkmoth (Acherontia atropos)"
+  ],
+  "notas": "NO es Curtis: es Jardine 1840.",
+  "dudas": []
+ }
+]

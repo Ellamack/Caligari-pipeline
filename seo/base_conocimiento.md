@@ -1,4 +1,4 @@
-# Caligari — base de conocimiento SEO (v0.4 · 14 oct 2026)
+# Caligari — base de conocimiento SEO (v0.5 · 15 oct 2026)
 
 Este documento es la formación del agente **Caligari**, especialista en el SEO de The Caligari Cabinet en Etsy.
 Caligari lo lee completo antes de cada tarea. Si algo aquí cambia (Etsy cambia sus reglas, los datos de la tienda
@@ -181,12 +181,20 @@ Ninguna herramienta tiene los conteos reales de Etsy: sus números son direccion
 
 ### 4.1 Reglas de la tienda (no negociables)  [Tienda]
 1. Cada listing tiene una **búsqueda principal** propia, declarada explícitamente.
-2. Con sus hermanos (mismo tema/obra), comparte **menos del 50%** de tags.
+2. **Tags propios:** al menos 3 de los 13 tags no los usa ningún otro listing de la tienda (1 si la ficha no trae
+   especies). Compartir tags anchos o de tema ("moth svg") con hermanos está bien: Etsy muestra pocos listings de una
+   misma tienda por búsqueda, así que el tag repetido no estorba; lo que se pierde es no cubrir búsquedas propias.
+   (Sustituye a la regla del 50% el 15 oct 2026: obligaba a diferenciar volúmenes iguales y empujaba a inventar.)
 3. **Línea A nunca dice "restored"**: "taken from a high-resolution scan of the original book, then straightened,
    cropped and given a gentle colour enhancement for printing". "Restored" solo para línea B (SVG).
 4. Nada que el producto no sea. Si no es un archivo de corte, no lleva tags de corte (ver 4.3).
 5. Bilingüe: título, tags y descripción en inglés (mercado principal) y español.
 6. Título de menos de 15 palabras; 13 tags de máximo 20 caracteres; sin repetir lo que ya va en atributos.
+7. **No inventar.** Los únicos hechos del producto son los de su ficha (seo/fichas.json): autor, obra, año, número de
+   figuras, sujetos y especies. Lo marcado con "?" es dudoso y no va en título ni tags. Si un dato falta, se queda
+   genérico ("fruit", "mushroom"). Un tag inventado atrae búsquedas que el producto no satisface: visitas que no
+   compran y que le enseñan a Etsy que el listing no es relevante.
+8. **Línea A (JPG escaneado)** no lleva svg, clipart, png, transparent ni fussy cut en título ni tags: no lo es.
 
 ### 4.2 Dónde puede ganar esta tienda  [Datos de la tienda, 14 oct 2026]
 Medido con Etsy Insights (búsquedas/mes, conversión) y /mercado (competencia). Sustituye la versión v0.3, que era
@@ -248,12 +256,18 @@ Archive.org, el catálogo actual (título y tags de todos los listings), y cuand
 }
 ```
 
-**Validador mecánico (código, no modelo).** Rechaza y pide corrección si:
-- el título tiene 15 palabras o más;
-- hay algún tag de más de 20 caracteres, o no son exactamente 13;
-- comparte 50% o más de tags con un hermano;
-- un listing de línea A contiene "restor";
-- hay tags repetidos o duplicados con los atributos.
+**Validador mecánico (código, no modelo).** Toda regla escrita aquí debe tener su revisión en `seo/validar.py`;
+si no la tiene, es una petición al modelo, no una regla (auditoría del 15 oct 2026). Rechaza y pide corrección si:
+- título de 15 palabras o más, con precio/envío/ofertas, con palabras repetidas o sin la búsqueda principal al inicio;
+- tags que no son exactamente 13, de más de 20 caracteres, repetidos (singular y plural cuentan igual), prohibidos,
+  sin demanda medida o fuera de temporada;
+- menos tags propios que el mínimo (4.1, regla 2);
+- números en el título que no están en la ficha (4.1, regla 7);
+- línea A: "restor…", o svg/clipart/png/transparent/fussy cut, o descripción sin el PDF con enlace de descarga;
+- descripción que promete corte o bordado;
+- la versión en español no pasa las mismas reglas de forma.
+**Sin revisión mecánica todavía (solo en el pedido al modelo):** que los nombres de especie/fruta sean los de la ficha;
+categoría y atributos (no se generan ni se aplican); descripción en español; no duplicar tags con atributos.
 
 **Revisión humana:** Elandrés aprueba el borrador en Etsy. Nada se publica sin él.
 

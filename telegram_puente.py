@@ -14,6 +14,7 @@ Corre siempre en el VPS (servicio systemd caligari-telegram). Hace tres cosas:
        /probar ID [estilo]                vista previa de un estilo, sin cambiar nada
        /estilos                           estilos, fuentes y mocos disponibles
        /actualizar                        git pull + reinicio del bot
+       /instalar (como texto de un .zip)  muestra qué cambia; «/instalar si» lo instala; «/instalar deshacer»
        /ayuda
 
 Seguridad: solo obedece al chat de TELEGRAM_CHAT_ID; lo demás se ignora y se anota.
@@ -250,7 +251,10 @@ AYUDA = ("Dos tipos de mensaje:\n\n"
          "/seo — Caligari audita la tienda: problemas de títulos y tags, tags repetidos, vistas (solo lee)\n"
          "/mercado [término] — competencia y tráfico en Etsy (todos los de seo/terminos.txt, o solo ese término)\n"
          "/propuestas — Caligari propone título y tags para todos los listings (no cambia nada; manda archivo)\n"
-         "/aplicar todos | ID [excepto ID,ID] [si] — sin «si» muestra qué cambiaría; con «si» lo cambia en Etsy\n\n"
+         "/aplicar todos | ID [excepto ID,ID] [si] — sin «si» muestra qué cambiaría; con «si» lo cambia en Etsy (inglés y español)\n"
+         "/aplicar español [ID] [si] — solo la traducción al español de los ya aplicados\n"
+         "/categorias palabras — categorías de Etsy · /categorias id N — sus atributos\n"
+         "/instalar — manda un .zip de código con ese texto; /instalar si lo instala; /instalar deshacer\n\n"
          "2) RESPUESTAS (sin /): cuando el bot pregunta algo, escribe solo la respuesta que te indica, "
          "p. ej. ok · quitar 67, 98 · umbral 25 · fecha 1779-1782 · retocar 12 · listo.\n"
          "Si hay varias preguntas abiertas a la vez: mantén presionado el mensaje de la pregunta → Responder.")
@@ -279,13 +283,58 @@ def actualizar(estado, mid):
     raise SystemExit(0)  # systemd (Restart=always) lo vuelve a arrancar con el código nuevo
 
 
+def descargar_documento(doc):
+    """Baja de Telegram el archivo que mandaste al bot (getFile)."""
+    token, _ = config()
+    info = _llamar("getFile", {"file_id": doc["file_id"]})
+    with urllib.request.urlopen(f"https://api.telegram.org/file/bot{token}/{info['file_path']}", timeout=60) as r:
+        return r.read()
+
+
+def orden_instalar(estado, msg, resto, mid):
+    """Código nuevo sin terminal: zip con «/instalar» → vista previa; «/instalar si» → instala; «deshacer»."""
+    import instalar as ins
+    try:
+        if msg.get("document"):
+            doc = msg["document"]
+            if not doc.get("file_name", "").endswith(".zip"):
+                raise ins.Rechazo("solo acepto .zip")
+            datos = descargar_documento(doc)
+            contenido = ins.revisar(datos)
+            ins.PENDIENTE.write_bytes(datos)
+            estado["instalar_nombre"] = doc["file_name"]
+            guardar_estado(estado)
+            enviar(f"📦 {doc['file_name']}: md5 correcto, {len(contenido)} archivos.\n{ins.resumen(contenido)}\n\n"
+                   "Nada cambió todavía. Para instalarlo: /instalar si", responder_a=mid)
+        elif resto in ("si", "sí"):
+            if not ins.PENDIENTE.exists():
+                raise ins.Rechazo("no hay paquete pendiente: primero manda el .zip con el texto /instalar")
+            contenido = ins.revisar(ins.PENDIENTE.read_bytes())  # se vuelve a revisar: nada se instala sin md5
+            texto = ins.instalar(contenido, estado.get("instalar_nombre", "paquete"))
+            ins.PENDIENTE.unlink()
+            enviar(texto + "\nReinicio el bot; en ~15 s vuelve (/ayuda para comprobar).", responder_a=mid)
+            guardar_estado(estado)
+            raise SystemExit(0)  # systemd lo levanta con el código nuevo
+        elif resto == "deshacer":
+            enviar(ins.deshacer(), responder_a=mid)
+            guardar_estado(estado)
+            raise SystemExit(0)
+        else:
+            enviar("Manda el .zip al bot con el texto /instalar (vista previa); luego /instalar si.", responder_a=mid)
+    except ins.Rechazo as e:
+        enviar(f"✖ No instalé nada: {e}", responder_a=mid)
+
+
 def atender(estado, msg):
     _, chat = config()
     if str(msg.get("chat", {}).get("id")) != str(chat):
         print(f"Ignorado: mensaje de chat no autorizado {msg.get('chat', {}).get('id')}")
         return
-    texto = (msg.get("text") or "").strip()
+    texto = (msg.get("text") or msg.get("caption") or "").strip()
     mid = msg["message_id"]
+    if msg.get("document") and not texto.lower().startswith("/instalar"):
+        enviar("Recibí un archivo. Si es código para instalar, mándalo otra vez con el texto /instalar.", responder_a=mid)
+        return
     if not texto:
         return
     if texto.startswith("/"):
@@ -342,6 +391,11 @@ def atender(estado, msg):
                                  stdout=fh, stderr=subprocess.STDOUT, start_new_session=True)
         elif orden == "/aplicar":
             palabras = resto.replace(",", " , ").split()
+            solo_es = palabras[:1] in (["español"], ["espanol"])
+            if solo_es:  # /aplicar español [ID] [si]: solo la traducción de los ya aplicados en inglés
+                palabras = palabras[1:] or ["todos"]
+                if palabras[0] in ("si", "sí"):
+                    palabras = ["todos"] + palabras
             args = ["--todos"] if palabras[:1] == ["todos"] else (["--listing", palabras[0]] if palabras else [])
             if not args or not (args[0] == "--todos" or args[1].isdigit()):
                 enviar("Uso: /aplicar todos [excepto ID,ID] [si]  ·  /aplicar ID [si]", responder_a=mid)
@@ -351,12 +405,23 @@ def atender(estado, msg):
                     args += ["--excepto", ",".join(ids)]
                 if "si" in palabras or "sí" in palabras:
                     args.append("--si")
+                if solo_es:
+                    args.append("--solo-es")
                 r = subprocess.run([sys.executable, "-m", "seo.aplicar", *args, "--telegram"], cwd=AQUI,
                                    capture_output=True, text=True, timeout=600)
                 if r.returncode != 0:
                     enviar((r.stderr or r.stdout or "error")[-1500:], responder_a=mid)
         elif orden == "/actualizar":
             actualizar(estado, mid)
+        elif orden == "/categorias":
+            p = resto.split()
+            args = ["--id", p[1]] if len(p) == 2 and p[0] == "id" and p[1].isdigit() else p
+            r = subprocess.run([sys.executable, "-m", "seo.taxonomia", *args, "--telegram"], cwd=AQUI,
+                               capture_output=True, text=True, timeout=120)
+            if r.returncode != 0:
+                enviar((r.stderr or r.stdout or "error")[-1500:], responder_a=mid)
+        elif orden == "/instalar":
+            orden_instalar(estado, msg, resto.strip().lower(), mid)
         elif orden in ("/nuevo", "/seguir"):
             partes = [p.strip() for p in re.split(r"[|;]", resto)]
             primero = partes[0].split()

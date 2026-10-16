@@ -23,13 +23,13 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from seo import demanda, inventario  # noqa: E402
+from seo import demanda, espanol, inventario  # noqa: E402
 from seo.modelo import pedir_json  # noqa: E402
-from seo.validar import REGLAS, linea_de, solapamiento, validar  # noqa: E402
+from seo.validar import REGLAS, capa_ancha, linea_de, solapamiento, validar  # noqa: E402
 
 AQUI = Path(__file__).parent
 BASE_CONOCIMIENTO = AQUI / "base_conocimiento.md"
-SECCIONES = ("2.4", "2.5", "2.6", "2.7", "2.10", "4.1", "4.2")  # lo que el modelo necesita; no la base entera
+SECCIONES = ("1.4", "1.5", "1.6", "2.4", "2.5", "2.6", "2.7", "2.10", "4.1", "4.2")  # lo que el modelo necesita; no la base entera
 INTENTOS = 3
 
 
@@ -41,11 +41,15 @@ def extracto_base():
 
 
 SISTEMA = """You are Caligari, the SEO specialist of The Caligari Cabinet, an Etsy shop of antique natural-history
-illustrations. You write listing titles, tags and descriptions in English for English-speaking buyers.
+illustrations. You write listing titles, tags and descriptions in English for English-speaking buyers, plus the
+Spanish title and tags the shop shows to buyers who browse Etsy in Spanish.
 Follow the shop's knowledge base below. Be accurate: never claim anything the product is not.
 Answer ONLY with a JSON object with exactly these keys:
 {"busqueda_principal": str, "titulo_en": str, "tags_en": [13 strings], "descripcion_en": str,
+ "titulo_es": str, "tags_es": [13 strings],
  "justificacion": str (in Spanish, 2-4 sentences: why these words, how they differ from sibling listings)}
+
+""" + espanol.GUIA_ES + """
 
 KNOWLEDGE BASE (excerpt):
 """
@@ -69,13 +73,24 @@ def hermanos(producto, catalogo, n=15):
     """Los listings del catálogo que más tags comparten con este (o los de títulos más parecidos)."""
     palabras = set(re.findall(r"[a-z]+", producto.get("titulo", "").lower()))
     def cercania(x):
-        s = solapamiento(producto.get("tags", []), x["tags"]) if producto.get("tags") else 0
+        s = solapamiento(producto.get("tags", []), x["tags"], capa_ancha()) if producto.get("tags") else 0
         return s + 0.05 * len(palabras & set(re.findall(r"[a-z]+", x["titulo"].lower())))
     otros = [x for x in catalogo if x["id"] != producto.get("id")]
     return sorted(otros, key=cercania, reverse=True)[:n]
 
 
+FICHAS = AQUI / "fichas.json"
+
+
+def ficha_de(producto):
+    """Hechos confirmados del producto (seo/fichas.json): lo único que el modelo puede afirmar."""
+    if not FICHAS.exists():
+        return None
+    return next((x for x in json.loads(FICHAS.read_text(encoding="utf-8")) if str(x["id"]) == str(producto.get("id"))), None)
+
+
 def pedido(producto, sibs):
+    ficha = ficha_de(producto)
     lineas = [f"PRODUCT LINE: {linea_de(producto)} "
               + ("(restored SVG: may say 'restored')" if linea_de(producto) == "B"
                  else "(scanned plates: NEVER say restored)")]
@@ -87,7 +102,16 @@ def pedido(producto, sibs):
         lineas.append(f"CURRENT DESCRIPTION (first 1200 chars): {producto['descripcion'][:1200]}")
     if producto.get("datos"):
         lineas.append("PRODUCT DATA: " + json.dumps(producto["datos"], ensure_ascii=False))
-    lineas.append("\nSIBLING LISTINGS IN THE SHOP (share less than half of their tags with each of them):")
+    if ficha:
+        hechos = {k: ficha[k] for k in ("linea", "formato", "figuras", "autor", "obra", "anio", "sujetos", "especies", "notas")}
+        lineas.append("PRODUCT FACTS (confirmed by the owner). These are the ONLY facts you may state: never name a species,"
+                      " fruit, author, date or number of figures that is not here. Items marked '?' are uncertain: do not"
+                      " use them in title or tags. If a fact is missing, stay generic.\n" + json.dumps(hechos, ensure_ascii=False))
+    ancha = [t for t in REGLAS.get("capa_ancha", {}).get("lista", [])]
+    minimo = REGLAS["tags_propios"]["con_especies" if (ficha or {}).get("especies") else "sin_especies"]
+    lineas.append(f"\nSIBLING LISTINGS IN THE SHOP. Sharing broad and subject tags with them is fine (e.g. {', '.join(ancha[:4])},"
+                  f" 'moth svg'). But at least {minimo} of your 13 tags must be used by NO sibling: take them from the"
+                  " PRODUCT FACTS (species, author, work). Never invent a fact to make a tag unique:")
     lineas += [f"- {x['titulo']} | tags: {', '.join(x['tags'])}" for x in sibs]
     lineas.append("\n" + demanda.tabla_prompt(producto))
     lineas.append("\nTAG STRATEGY (three layers): 2-3 broad tags with volume and file intent (e.g. 'butterfly svg',"
@@ -115,8 +139,12 @@ def generar(producto, catalogo):
         gasto += uso["usd"]
         prop["tags_en"] = [t.strip().lower() for t in prop.get("tags_en", [])]
         candidato = {"id": producto["id"], "titulo": prop.get("titulo_en", ""), "tags": prop["tags_en"],
-                     "descripcion": prop.get("descripcion_en", ""), "linea": linea_de(producto)}
+                     "descripcion": prop.get("descripcion_en", ""), "linea": linea_de(producto),
+                     "ficha": ficha_de(producto), "busqueda_principal": prop.get("busqueda_principal", "")}
         problemas = validar(candidato, sibs)
+        prop["tags_es"] = [t.strip().lower() for t in prop.get("tags_es", [])]
+        problemas += [("espanol", "versión en español: " + t) for t in
+                      espanol.problemas_es(prop.get("titulo_es", ""), prop["tags_es"], linea_de(producto))]
         if not problemas:
             break
     prop.update({"_id": producto["id"], "_linea": linea_de(producto), "_intentos": intento,
@@ -158,6 +186,7 @@ def revision_md(props):
         a = p["_antes"]
         lineas += [f"## {p['_id']}" + ("  ⚠ NO PASA: " + "; ".join(p["_problemas"]) if p["_problemas"] else ""),
                    f"- **Antes:** {a.get('titulo')}", f"- **Ahora:** {p.get('titulo_en')}",
+                   f"- **Español:** {p.get('titulo_es', '—')} · tags: {', '.join(p.get('tags_es', [])) or '—'}",
                    f"- **Búsqueda principal:** {p.get('busqueda_principal')}",
                    f"- **Salen:** {', '.join(sorted(set(a.get('tags') or []) - set(p['tags_en']))) or '—'}",
                    f"- **Entran:** {', '.join(t for t in p['tags_en'] if t not in (a.get('tags') or [])) or '—'}",
