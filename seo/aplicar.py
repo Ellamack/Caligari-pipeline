@@ -93,15 +93,17 @@ def parte_ingles(f, p, shop_id, si, con_descripcion):
     return None
 
 
-def parte_espanol(f, p, shop_id, si):
-    """None si quedó (o quedaría) aplicado; texto si no hay nada que hacer o falló."""
+def parte_espanol(f, p, shop_id, si, rehacer=False):
+    """None si quedó (o quedaría) aplicado; texto si no hay nada que hacer o falló.
+    rehacer: escribe el español de nuevo, SOLO en la vista previa; con «si» se aplica lo que ya viste, nunca uno nuevo."""
     lid = p["_id"]
-    if p.get("_aplicado_es"):
+    rehacer = rehacer and not si
+    if p.get("_aplicado_es") and not rehacer:
         return "español ya aplicado"
     ahora = espanol.actual_es(shop_id, lid)
     if ahora is None:
         return "no tiene traducción al español en Etsy (Etsy traduce solo)"
-    espanol.asegurar_es(f, p, ahora)
+    espanol.asegurar_es(f, p, ahora, rehacer=rehacer)
     if p.get("_problemas_es"):
         return "la versión en español no pasa las reglas: " + "; ".join(p["_problemas_es"])
     print(f"\n{lid} · ESPAÑOL\n  título: {ahora['titulo']}\n       → {p['titulo_es']}\n  tags:   {', '.join(ahora['tags'])}"
@@ -116,7 +118,7 @@ def parte_espanol(f, p, shop_id, si):
     return None
 
 
-def aplicar(seleccion, shop_id, si, con_descripcion, solo_es=False):
+def aplicar(seleccion, shop_id, si, con_descripcion, solo_es=False, rehacer_es=False):
     """Devuelve (listos, saltados, avisos): listos = [(id, 'inglés y español' | 'inglés' | 'español')]."""
     listos, saltados, avisos = [], [], []
     for f, p in seleccion:
@@ -135,7 +137,7 @@ def aplicar(seleccion, shop_id, si, con_descripcion, solo_es=False):
                 continue
             hecho.append("inglés")
         try:
-            motivo = parte_espanol(f, p, shop_id, si)
+            motivo = parte_espanol(f, p, shop_id, si, rehacer_es)
         except Exception as e:  # noqa: BLE001  el inglés ya quedó; el español se reintenta con --solo-es
             motivo = f"español falló: {e}"
         if motivo is None:
@@ -187,6 +189,7 @@ def main():
     ap.add_argument("--excepto", default="")
     ap.add_argument("--si", action="store_true", help="sin esto no cambia nada")
     ap.add_argument("--solo-es", action="store_true", help="solo el español de los ya aplicados en inglés")
+    ap.add_argument("--rehacer-es", action="store_true", help="vista previa con un español escrito de nuevo")
     ap.add_argument("--descripcion", action="store_true")
     ap.add_argument("--telegram", action="store_true")
     a = ap.parse_args()
@@ -203,7 +206,7 @@ def main():
         seleccion = [(f, p) for f, p in seleccion if p.get("_aplicado")]
     if not seleccion:
         sys.exit("No encontré propuestas. Primero: python3 -m seo.generar --todos")
-    listos, saltados, avisos = aplicar(seleccion, shop_id, a.si, a.descripcion, a.solo_es)
+    listos, saltados, avisos = aplicar(seleccion, shop_id, a.si, a.descripcion, a.solo_es, a.rehacer_es)
     # nombre legible: el título en inglés que hoy ves en la tienda (el nuevo si ya se aplicó, el de antes si no)
     titulos = {str(p["_id"]): (p.get("titulo_en") if p.get("_aplicado") else p.get("_antes", {}).get("titulo", ""))
                for _, p in seleccion}

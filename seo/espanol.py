@@ -46,9 +46,16 @@ def problemas_es(titulo, tags, linea):
             if c not in ("canibaliza", "tag_sin_demanda", "tag_fuera_de_temporada")]
 
 
-def asegurar_es(archivo, p, actual=None):
-    """Garantiza que la propuesta tenga titulo_es y tags_es válidos; si faltan, los genera y guarda. Devuelve p."""
-    if p.get("titulo_es") and p.get("tags_es"):
+def ficha(lid):
+    ruta = Path(__file__).parent / "fichas.json"
+    if not ruta.exists():
+        return None
+    return next((x for x in json.loads(ruta.read_text(encoding="utf-8")) if str(x["id"]) == str(lid)), None)
+
+
+def asegurar_es(archivo, p, actual=None, rehacer=False):
+    """Garantiza que la propuesta tenga titulo_es y tags_es válidos; si faltan (o rehacer), los genera y guarda."""
+    if p.get("titulo_es") and p.get("tags_es") and not rehacer:
         # lo ya generado se vuelve a revisar con las reglas de HOY; si ya no pasa, se rehace
         p["_problemas_es"] = problemas_es(p["titulo_es"], p["tags_es"], p.get("_linea", "B"))
         if not p["_problemas_es"]:
@@ -56,6 +63,12 @@ def asegurar_es(archivo, p, actual=None):
     from seo.modelo import pedir_json
     usuario = (f"PRODUCT LINE: {p.get('_linea', 'B')}\nENGLISH TITLE: {p.get('titulo_en')}\n"
                f"ENGLISH TAGS: {', '.join(p.get('tags_en', []))}\nMAIN SEARCH (English): {p.get('busqueda_principal')}")
+    fi = ficha(p["_id"])
+    if fi:
+        usuario += ("\nPRODUCT FACTS (confirmed by the owner; the ONLY facts and species names you may use; when a"
+                    " Spanish name is given here, use exactly that one): "
+                    + json.dumps({k: fi.get(k) for k in ("figuras", "autor", "obra", "anio", "sujetos", "especies", "notas")},
+                                 ensure_ascii=False))
     if actual:
         usuario += f"\nCURRENT SPANISH TITLE (old, for reference only): {actual.get('titulo')}"
     problemas, prop = [], {}

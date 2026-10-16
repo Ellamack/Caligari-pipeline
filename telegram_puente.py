@@ -252,7 +252,7 @@ AYUDA = ("Dos tipos de mensaje:\n\n"
          "/mercado [término] — competencia y tráfico en Etsy (todos los de seo/terminos.txt, o solo ese término)\n"
          "/propuestas — Caligari propone título y tags para todos los listings (no cambia nada; manda archivo)\n"
          "/aplicar todos | ID [excepto ID,ID] [si] — sin «si» muestra qué cambiaría; con «si» lo cambia en Etsy (inglés y español)\n"
-         "/aplicar español [ID] [si] — solo la traducción al español de los ya aplicados\n"
+         "/aplicar español [ID] [rehacer] [si] — solo la traducción al español de los ya aplicados\n"
          "/categorias palabras — categorías de Etsy · /categorias id N — sus atributos\n"
          "/instalar — manda un .zip de código con ese texto; /instalar si lo instala; /instalar deshacer\n\n"
          "2) RESPUESTAS (sin /): cuando el bot pregunta algo, escribe solo la respuesta que te indica, "
@@ -392,9 +392,9 @@ def atender(estado, msg):
         elif orden == "/aplicar":
             palabras = resto.replace(",", " , ").split()
             solo_es = palabras[:1] in (["español"], ["espanol"])
-            if solo_es:  # /aplicar español [ID] [si]: solo la traducción de los ya aplicados en inglés
+            if solo_es:  # /aplicar español [ID] [rehacer] [si]: solo la traducción de los ya aplicados en inglés
                 palabras = palabras[1:] or ["todos"]
-                if palabras[0] in ("si", "sí"):
+                if palabras[0] in ("si", "sí", "rehacer"):
                     palabras = ["todos"] + palabras
             args = ["--todos"] if palabras[:1] == ["todos"] else (["--listing", palabras[0]] if palabras else [])
             if not args or not (args[0] == "--todos" or args[1].isdigit()):
@@ -407,6 +407,8 @@ def atender(estado, msg):
                     args.append("--si")
                 if solo_es:
                     args.append("--solo-es")
+                    if "rehacer" in palabras:
+                        args.append("--rehacer-es")
                 r = subprocess.run([sys.executable, "-m", "seo.aplicar", *args, "--telegram"], cwd=AQUI,
                                    capture_output=True, text=True, timeout=600)
                 if r.returncode != 0:
