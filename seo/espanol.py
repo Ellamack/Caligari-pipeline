@@ -25,7 +25,8 @@ INTENTOS = 3
 
 GUIA_ES = """SPANISH VERSION (titulo_es, tags_es) for buyers who browse Etsy in Spanish (Mexico, Spain, Latin America).
 It is NOT a word-by-word translation: use the words a Spanish-speaking buyer would actually type in Etsy search.
-- Keep the format words Spanish crafters use as they are: svg, png, clipart, scrapbooking, junk journal.
+- Crafting jargon stays IN ENGLISH, as Spanish-speaking crafters actually type it: svg, png, clipart, scrapbooking,
+  junk journal, ephemera, fussy cuts. Never translate 'ephemera' as 'efímera' (nobody searches it).
 - Use Spanish common names: mariposa, polilla, escarabajo, insecto, oruga, abeja, avispa, mantis, colibrí, pájaro/ave,
   hongo/seta, flor, rosa, fruta, pez, concha. Never Latin names in tags (they may stay in the title next to the author).
 - Title: max 14 words, the main search first in Spanish (e.g. 'Colibrí SVG PNG, ...'), keep author and year at the end,
